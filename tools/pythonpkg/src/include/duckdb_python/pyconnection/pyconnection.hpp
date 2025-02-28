@@ -157,42 +157,24 @@ struct udf_avg_state_t {
 
 struct UDFAverageFunction {
 	template <class STATE>
-	static void Initialize(STATE &state) {
-		state.count = 0;
-		state.sum = 0;
-	}
+	static void Initialize(STATE &state);
 
 	template <class INPUT_TYPE, class STATE, class OP>
-	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
-		state.sum += input;
-		state.count++;
-	}
+	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &);
 
 	template <class INPUT_TYPE, class STATE, class OP>
-	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count) {
-		state.count += count;
-		state.sum += input * count;
-	}
+	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count);
 
 	template <class STATE, class OP>
-	static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
-		target.count += source.count;
-		target.sum += source.sum;
-	}
+	static void Combine(const STATE &source, STATE &target, AggregateInputData &);
 
 	template <class T, class STATE>
-	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
-		if (state.count == 0) {
-			finalize_data.ReturnNull();
-		} else {
-			target = state.sum / state.count;
-		}
-	}
+	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data);
 
-	static bool IgnoreNull() {
-		return true;
-	}
+	static bool IgnoreNull();
 };
+
+
 
 struct DuckDBPyConnection : public enable_shared_from_this<DuckDBPyConnection> {
 private:
@@ -402,14 +384,6 @@ private:
 	                               const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
 	                               FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
 	                               bool side_effects);
-
-	AggregateFunction CreateAggregateUDF(
-		const string &name,
-		const py::function &udf,
-	    const py::object &parameters,
-	    const shared_ptr<DuckDBPyType> &return_type,
-	    FunctionNullHandling null_handling,
-	    PythonExceptionHandling exception_handling);
 
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
