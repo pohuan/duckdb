@@ -149,6 +149,7 @@ private:
 };
 
 // AVG function copied from test code
+/*
 template <class T>
 struct udf_avg_state_t {
 	uint64_t count;
@@ -173,7 +174,7 @@ struct UDFAverageFunction {
 
 	static bool IgnoreNull();
 };
-
+*/
 
 
 struct DuckDBPyConnection : public enable_shared_from_this<DuckDBPyConnection> {

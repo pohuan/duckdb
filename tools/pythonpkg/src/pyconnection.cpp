@@ -408,6 +408,8 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(const st
 		                              "functions with the same name is not supported yet, please remove it first",
 		                              name);
 	}
+
+	/*
 	auto aggregate_function =
 	    UDFWrapper::CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>(
 	        "udf_avg_double");
@@ -418,6 +420,7 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(const st
 	auto dependency = make_uniq<ExternalDependency>();
 	dependency->AddDependency("function", PythonDependencyItem::Create(udf));
 	registered_functions[name] = std::move(dependency);
+	*/
 
 	return shared_from_this();
 }
