@@ -1,7 +1,6 @@
 #include "duckdb/main/query_result.hpp"
 #include "duckdb_python/pybind11/pybind_wrapper.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/function/udf_function.hpp"
 #include "duckdb_python/pytype.hpp"
 #include "duckdb_python/pyconnection/pyconnection.hpp"
 #include "duckdb_python/pandas/pandas_scan.hpp"
@@ -577,7 +576,7 @@ AggregateFunction DuckDBPyConnection::CreateAggregateUDF(const string &name, con
 	data.Verify();
 
 	// TODO: Figure out whether I should change it to be similar to GetFunction.
-	return UDFWrapper::CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>("udf_avg_double");
+	return connection.CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>("udf_avg_double");
 }
 
 
