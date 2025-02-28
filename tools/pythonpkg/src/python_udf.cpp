@@ -497,45 +497,51 @@ public:
 		return scalar_function;
 	}
 
-	struct AggregateState {
-		double sum;
-		idx_t count;
+	// AVG function copied from test code
+	template <class T>
+	struct udf_avg_state_t {
+		uint64_t count;
+		T sum;
 	};
 
-	void AggregateInitialize(AggregateState *state) {
-		state->sum = 0;
-		state->count = 0;
-	}
+	struct UDFAverageFunction {
+		template <class STATE>
+		static void Initialize(STATE &state) {
+			state.count = 0;
+			state.sum = 0;
+		}
 
-	void AggregateUpdate(AggregateState *state, Vector inputs[], idx_t input_count, idx_t count) {
-		for (idx_t i = 0; i < count; i++) {
-			if (!inputs[0].IsNull(i)) {
-				state->sum += inputs[0].GetValue(i).GetValue<double>();
-				state->count++;
+		template <class INPUT_TYPE, class STATE, class OP>
+		static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+			state.sum += input;
+			state.count++;
+		}
+
+		template <class INPUT_TYPE, class STATE, class OP>
+		static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count) {
+			state.count += count;
+			state.sum += input * count;
+		}
+
+		template <class STATE, class OP>
+		static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
+			target.count += source.count;
+			target.sum += source.sum;
+		}
+
+		template <class T, class STATE>
+		static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+			if (state.count == 0) {
+				finalize_data.ReturnNull();
+			} else {
+				target = state.sum / state.count;
 			}
 		}
-	}
 
-	void AggregateCombine(AggregateState *state, AggregateState *other) {
-		state->sum += other->sum;
-		state->count += other->count;
-	}
-
-	void AggregateFinalize(AggregateState *state, Vector &result) {
-		if (state->count == 0) {
-			result.SetValue(0, Value());
-		} else {
-			result.SetValue(0, Value::DOUBLE(state->sum / state->count));
+		static bool IgnoreNull() {
+			return true;
 		}
-	}
-
-	AggregateFunction GetAggregateFunction(const string &name,
-										   const vector<LogicalType> &arguments,
-	                                       const LogicalType &return_type)
-	{
-		return AggregateFunction(name, arguments, return_type, sizeof(AggregateState), AggregateInitialize,
-		                         AggregateUpdate, AggregateCombine, AggregateFinalize);
-	}
+	};
 };
 
 } // namespace
@@ -570,7 +576,7 @@ AggregateFunction DuckDBPyConnection::CreateAggregateUDF(const string &name, con
 	data.Verify();
 
 	// TODO: Figure out whether I should change it to be similar to GetFunction.
-	return data.GetAggregateFunction(name, data.parameters, data.return_type);
+	return CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>("udf_avg_double"));
 }
 
 
