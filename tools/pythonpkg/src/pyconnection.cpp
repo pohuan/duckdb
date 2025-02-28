@@ -392,44 +392,6 @@ DuckDBPyConnection::RegisterScalarUDF(const string &name, const py::function &ud
 	return shared_from_this();
 }
 
-
-template <class STATE>
-void UDFAverageFunction::Initialize(STATE &state) {
-	state.count = 0;
-	state.sum = 0;
-}
-
-template <class INPUT_TYPE, class STATE, class OP>
-void UDFAverageFunction::Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
-	state.sum += input;
-	state.count++;
-}
-
-template <class INPUT_TYPE, class STATE, class OP>
-void UDFAverageFunction::ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count) {
-	state.count += count;
-	state.sum += input * count;
-}
-
-template <class STATE, class OP>
-void UDFAverageFunction::Combine(const STATE &source, STATE &target, AggregateInputData &) {
-	target.count += source.count;
-	target.sum += source.sum;
-}
-
-template <class T, class STATE>
-void UDFAverageFunction::Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
-	if (state.count == 0) {
-		finalize_data.ReturnNull();
-	} else {
-		target = state.sum / state.count;
-	}
-}
-
-bool UDFAverageFunction::IgnoreNull() {
-	return true;
-}
-
 shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function &udf,
                                                                         const py::object &parameters_p,
                                                                         const shared_ptr<DuckDBPyType> &return_type_p,
