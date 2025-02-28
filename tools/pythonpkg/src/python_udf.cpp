@@ -561,25 +561,4 @@ ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py:
 	return data.GetFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
 }
 
-
-AggregateFunction DuckDBPyConnection::CreateAggregateUDF(const string &name, const py::function &udf,
-                                                         const py::object &parameters,
-                                                         const shared_ptr<DuckDBPyType> &return_type,
-                                                         FunctionNullHandling null_handling,
-                                                         PythonExceptionHandling exception_handling) {
-	PythonUDFData data(name, false, null_handling);
-	auto &connection = con.GetConnection();
-
-	data.AnalyzeSignature(udf);
-	data.OverrideParameters(parameters);
-	data.OverrideReturnType(return_type);
-	data.Verify();
-
-	// TODO: Figure out whether I should change it to be similar to GetFunction.
-	return connection.CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>("udf_avg_double");
-}
-
-
-
-
 } // namespace duckdb

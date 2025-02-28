@@ -22,6 +22,7 @@
 #include "duckdb_python/python_dependency.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/function/aggregate_function.hpp"
+#include "duckdb/function/udf_function.hpp"
 #include "duckdb_python/pybind11/conversions/exception_handling_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_udf_type_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_csv_line_terminator_enum.hpp"
