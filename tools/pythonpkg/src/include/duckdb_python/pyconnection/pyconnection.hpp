@@ -21,6 +21,8 @@
 #include "duckdb_python/pybind11/registered_py_object.hpp"
 #include "duckdb_python/python_dependency.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/aggregate_function.hpp"
+#include "duckdb/function/udf_function.hpp"
 #include "duckdb_python/pybind11/conversions/exception_handling_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_udf_type_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_csv_line_terminator_enum.hpp"
@@ -146,6 +148,7 @@ private:
 	unique_ptr<DuckDBPyRelation> result;
 };
 
+
 struct DuckDBPyConnection : public enable_shared_from_this<DuckDBPyConnection> {
 private:
 	class Cursors {
@@ -230,6 +233,7 @@ public:
 	                  FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	                  PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR,
 	                  bool side_effects = false);
+
 
 	shared_ptr<DuckDBPyConnection> UnregisterUDF(const string &name);
 
@@ -349,6 +353,7 @@ private:
 	                               const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
 	                               FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
 	                               bool side_effects);
+
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
 
