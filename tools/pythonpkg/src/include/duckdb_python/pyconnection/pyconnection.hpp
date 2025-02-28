@@ -262,10 +262,13 @@ public:
 	                  PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR,
 	                  bool side_effects = false);
 
+	/*
 	shared_ptr<DuckDBPyConnection> RegisterAggregateUDF(
 	    const string &name, const py::function &udf, const py::object &parameters_p,
 	    const shared_ptr<DuckDBPyType> &return_type_p, FunctionNullHandling null_handling,
 	    PythonExceptionHandling exception_handling);
+	*/
+
 
 	shared_ptr<DuckDBPyConnection> UnregisterUDF(const string &name);
 

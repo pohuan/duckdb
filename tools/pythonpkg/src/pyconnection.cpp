@@ -392,6 +392,7 @@ DuckDBPyConnection::RegisterScalarUDF(const string &name, const py::function &ud
 	return shared_from_this();
 }
 
+/*
 shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function &udf,
                                                                         const py::object &parameters_p,
                                                                         const shared_ptr<DuckDBPyType> &return_type_p,
@@ -409,7 +410,7 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(const st
 		                              name);
 	}
 
-	/*
+
 	auto aggregate_function =
 	    UDFWrapper::CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>(
 	        "udf_avg_double");
@@ -420,11 +421,11 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(const st
 	auto dependency = make_uniq<ExternalDependency>();
 	dependency->AddDependency("function", PythonDependencyItem::Create(udf));
 	registered_functions[name] = std::move(dependency);
-	*/
+
 
 	return shared_from_this();
 }
-
+*/
 
 void DuckDBPyConnection::Initialize(py::handle &m) {
 	auto connection_module =
