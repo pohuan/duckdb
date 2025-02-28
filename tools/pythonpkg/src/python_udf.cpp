@@ -500,52 +500,6 @@ public:
 
 } // namespace
 
-	// AVG function copied from test code
-template <class T>
-struct udf_avg_state_t {
-	uint64_t count;
-	T sum;
-};
-
-struct UDFAverageFunction {
-	template <class STATE>
-	static void Initialize(STATE &state) {
-		state.count = 0;
-		state.sum = 0;
-	}
-
-	template <class INPUT_TYPE, class STATE, class OP>
-	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
-		state.sum += input;
-		state.count++;
-	}
-
-	template <class INPUT_TYPE, class STATE, class OP>
-	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count) {
-		state.count += count;
-		state.sum += input * count;
-	}
-
-	template <class STATE, class OP>
-	static void Combine(const STATE &source, STATE &target, AggregateInputData &) {
-		target.count += source.count;
-		target.sum += source.sum;
-	}
-
-	template <class T, class STATE>
-	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
-		if (state.count == 0) {
-			finalize_data.ReturnNull();
-		} else {
-			target = state.sum / state.count;
-		}
-	}
-
-	static bool IgnoreNull() {
-		return true;
-	}
-};
-
 ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py::function &udf,
                                                    const py::object &parameters,
                                                    const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
