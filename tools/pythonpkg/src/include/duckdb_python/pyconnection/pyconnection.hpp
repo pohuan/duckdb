@@ -21,6 +21,7 @@
 #include "duckdb_python/pybind11/registered_py_object.hpp"
 #include "duckdb_python/python_dependency.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/aggregate_function.hpp"
 #include "duckdb_python/pybind11/conversions/exception_handling_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_udf_type_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_csv_line_terminator_enum.hpp"
@@ -349,6 +350,15 @@ private:
 	                               const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
 	                               FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
 	                               bool side_effects);
+
+	AggregateFunction CreateAggregateUDF(
+		const string &name,
+		const py::function &udf,
+	    const py::object &parameters,
+	    const shared_ptr<DuckDBPyType> &return_type,
+	    FunctionNullHandling null_handling,
+	    PythonExceptionHandling exception_handling);
+
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
 

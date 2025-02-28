@@ -496,6 +496,46 @@ public:
 		                               nullptr, varargs, function_side_effects, null_handling);
 		return scalar_function;
 	}
+
+	struct AggregateState {
+		double sum;
+		idx_t count;
+	};
+
+	void AggregateInitialize(AggregateState *state) {
+		state->sum = 0;
+		state->count = 0;
+	}
+
+	void AggregateUpdate(AggregateState *state, Vector inputs[], idx_t input_count, idx_t count) {
+		for (idx_t i = 0; i < count; i++) {
+			if (!inputs[0].IsNull(i)) {
+				state->sum += inputs[0].GetValue(i).GetValue<double>();
+				state->count++;
+			}
+		}
+	}
+
+	void AggregateCombine(AggregateState *state, AggregateState *other) {
+		state->sum += other->sum;
+		state->count += other->count;
+	}
+
+	void AggregateFinalize(AggregateState *state, Vector &result) {
+		if (state->count == 0) {
+			result.SetValue(0, Value());
+		} else {
+			result.SetValue(0, Value::DOUBLE(state->sum / state->count));
+		}
+	}
+
+	AggregateFunction GetAggregateFunction(const string &name,
+										   const vector<LogicalType> &arguments,
+	                                       const LogicalType &return_type)
+	{
+		return AggregateFunction(name, arguments, return_type, sizeof(AggregateState), AggregateInitialize,
+		                         AggregateUpdate, AggregateCombine, AggregateFinalize);
+	}
 };
 
 } // namespace
@@ -514,5 +554,28 @@ ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py:
 	data.Verify();
 	return data.GetFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
 }
+
+
+AggregateFunction DuckDBPyConnection::CreateAggregateUDF(const string &name, const py::function &udf,
+                                                         const py::object &parameters,
+                                                         const shared_ptr<DuckDBPyType> &return_type,
+                                                         FunctionNullHandling null_handling,
+                                                         PythonExceptionHandling exception_handling) {
+	PythonUDFData data(name, false, null_handling);
+	auto &connection = con.GetConnection();
+
+	data.AnalyzeSignature(udf);
+	data.OverrideParameters(parameters);
+	data.OverrideReturnType(return_type);
+	data.Verify();
+
+	vector<LogicalType> arguments = data.parameters;
+	LogicalType return_type = data.return_type;
+
+	return data.GetAggregateFunction(name, arguments, return_type);
+}
+
+
+
 
 } // namespace duckdb
