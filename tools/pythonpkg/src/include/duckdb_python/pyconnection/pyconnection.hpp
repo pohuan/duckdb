@@ -148,34 +148,6 @@ private:
 	unique_ptr<DuckDBPyRelation> result;
 };
 
-// AVG function copied from test code
-/*
-template <class T>
-struct udf_avg_state_t {
-	uint64_t count;
-	T sum;
-};
-
-struct UDFAverageFunction {
-	template <class STATE>
-	static void Initialize(STATE &state);
-
-	template <class INPUT_TYPE, class STATE, class OP>
-	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &);
-
-	template <class INPUT_TYPE, class STATE, class OP>
-	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count);
-
-	template <class STATE, class OP>
-	static void Combine(const STATE &source, STATE &target, AggregateInputData &);
-
-	template <class T, class STATE>
-	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data);
-
-	static bool IgnoreNull();
-};
-*/
-
 
 struct DuckDBPyConnection : public enable_shared_from_this<DuckDBPyConnection> {
 private:
@@ -261,13 +233,6 @@ public:
 	                  FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	                  PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR,
 	                  bool side_effects = false);
-
-	/*
-	shared_ptr<DuckDBPyConnection> RegisterAggregateUDF(
-	    const string &name, const py::function &udf, const py::object &parameters_p,
-	    const shared_ptr<DuckDBPyType> &return_type_p, FunctionNullHandling null_handling,
-	    PythonExceptionHandling exception_handling);
-	*/
 
 
 	shared_ptr<DuckDBPyConnection> UnregisterUDF(const string &name);
