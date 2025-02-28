@@ -569,10 +569,8 @@ AggregateFunction DuckDBPyConnection::CreateAggregateUDF(const string &name, con
 	data.OverrideReturnType(return_type);
 	data.Verify();
 
-	vector<LogicalType> arguments = data.parameters;
-	LogicalType return_type = data.return_type;
-
-	return data.GetAggregateFunction(name, arguments, return_type);
+	// TODO: Figure out whether I should change it to be similar to GetFunction.
+	return data.GetAggregateFunction(name, data.parameters, data.return_type);
 }
 
 
