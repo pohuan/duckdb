@@ -43,6 +43,7 @@
 #include "duckdb_python/filesystem_object.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/parser/parsed_data/create_aggregate_function_info.hpp"
 #include "duckdb_python/pandas/pandas_scan.hpp"
 #include "duckdb_python/python_objects.hpp"
 #include "duckdb/function/function.hpp"
@@ -134,6 +135,12 @@ static void InitializeConnectionMethods(py::class_<DuckDBPyConnection, shared_pt
 	m.def("filesystem_is_registered", &DuckDBPyConnection::FileSystemIsRegistered,
 	      "Check if a filesystem with the provided name is currently registered", py::arg("name"));
 	m.def("create_function", &DuckDBPyConnection::RegisterScalarUDF,
+	      "Create a DuckDB function out of the passing in Python function so it can be used in queries",
+	      py::arg("name"), py::arg("function"), py::arg("parameters") = py::none(), py::arg("return_type") = py::none(),
+	      py::kw_only(), py::arg("type") = PythonUDFType::NATIVE,
+	      py::arg("null_handling") = FunctionNullHandling::DEFAULT_NULL_HANDLING,
+	      py::arg("exception_handling") = PythonExceptionHandling::FORWARD_ERROR, py::arg("side_effects") = false);
+	m.def("create_aggregate_function", &DuckDBPyConnection::RegisterAggregateUDF,
 	      "Create a DuckDB function out of the passing in Python function so it can be used in queries",
 	      py::arg("name"), py::arg("function"), py::arg("parameters") = py::none(), py::arg("return_type") = py::none(),
 	      py::kw_only(), py::arg("type") = PythonUDFType::NATIVE,
@@ -382,6 +389,120 @@ DuckDBPyConnection::RegisterScalarUDF(const string &name, const py::function &ud
 	                                       null_handling, exception_handling, side_effects);
 	CreateScalarFunctionInfo info(scalar_function);
 
+	context.RegisterFunction(info);
+
+	auto dependency = make_uniq<ExternalDependency>();
+	dependency->AddDependency("function", PythonDependencyItem::Create(udf));
+	registered_functions[name] = std::move(dependency);
+
+	return shared_from_this();
+}
+
+template <class STATE>
+void UDFAverageFunction::Initialize(STATE &state) {
+	state.count = 0;
+	state.sum = 0;
+}
+
+template <class INPUT_TYPE, class STATE, class OP>
+void UDFAverageFunction::Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+	state.sum += input;
+	state.count++;
+}
+
+template <class INPUT_TYPE, class STATE, class OP>
+void UDFAverageFunction::ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count) {
+	state.count += count;
+	state.sum += input * count;
+}
+
+template <class STATE, class OP>
+void UDFAverageFunction::Combine(const STATE &source, STATE &target, AggregateInputData &) {
+	target.count += source.count;
+	target.sum += source.sum;
+}
+
+template <class T, class STATE>
+void UDFAverageFunction::Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+	if (state.count == 0) {
+		finalize_data.ReturnNull();
+	} else {
+		target = state.sum / state.count;
+	}
+}
+
+bool UDFAverageFunction::IgnoreNull() {
+	return true;
+}
+
+
+// Simplication to double and single field to start python udf aggregation work.
+// Need to add back complex and composite type later.
+template <class STATE>
+void UDFSumFunction::Initialize(STATE &state) {
+	state = 0;
+}
+
+template <class INPUT_TYPE, class STATE, class OP>
+void UDFSumFunction::Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
+	state += input;
+}
+
+template <class INPUT_TYPE, class STATE, class OP>
+void UDFSumFunction::ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count) {
+	state += input * count;
+}
+
+template <class STATE, class OP>
+void UDFSumFunction::Combine(const STATE &source, STATE &target, AggregateInputData &) {
+	// target += sum;
+	target += source;
+}
+
+template <class T, class STATE>
+void UDFSumFunction::Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
+	target = state;
+}
+
+bool UDFSumFunction::IgnoreNull() {
+	return true;
+}
+
+
+shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(
+    const string &name, const py::function &udf, const py::object &arguments,
+    const shared_ptr<DuckDBPyType> &return_type, PythonUDFType type,
+    FunctionNullHandling null_handling,
+    PythonExceptionHandling exception_handling, bool side_effects)
+{
+	auto &connection = con.GetConnection();
+	auto &context = *connection.context;
+
+	if (context.transaction.HasActiveTransaction()) {
+		context.CancelTransaction();
+	}
+	if (registered_functions.find(name) != registered_functions.end()) {
+		throw NotImplementedException("A function by the name of '%s' is already created, creating multiple "
+		                              "functions with the same name is not supported yet, please remove it first",
+		                              name);
+	}
+
+	// TODO: figure out strange c++ template and python co-op issue.
+	CombineFuncPtr<double> aggregate_combine_function =
+	  CreateCombineUDF(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
+	                                       null_handling, exception_handling, side_effects);
+	AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
+	    "udf_sum_double", aggregate_combine_function);
+	//AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
+	//    "udf_sum_double", UDFSumFunction::Combine<double, UDFSumFunction>);
+	// UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>("udf_sum_double");
+
+	/*
+	    UDFWrapper::CreateAggregateFunction<UDFAverageFunction, udf_avg_state_t<double>, double, double>(
+	        "udf_avg_double");
+	*/
+
+	CreateAggregateFunctionInfo info(aggregate_function);
 	context.RegisterFunction(info);
 
 	auto dependency = make_uniq<ExternalDependency>();
