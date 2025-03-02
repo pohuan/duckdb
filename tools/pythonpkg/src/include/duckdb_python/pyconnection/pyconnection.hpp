@@ -21,6 +21,8 @@
 #include "duckdb_python/pybind11/registered_py_object.hpp"
 #include "duckdb_python/python_dependency.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/aggregate_function.hpp"
+#include "duckdb/function/udf_function.hpp"
 #include "duckdb_python/pybind11/conversions/exception_handling_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_udf_type_enum.hpp"
 #include "duckdb_python/pybind11/conversions/python_csv_line_terminator_enum.hpp"
@@ -146,6 +148,55 @@ private:
 	unique_ptr<DuckDBPyRelation> result;
 };
 
+template <class T>
+struct udf_avg_state_t {
+	uint64_t count;
+	T sum;
+};
+
+struct UDFAverageFunction {
+	template <class STATE>
+	static void Initialize(STATE &state);
+
+	template <class INPUT_TYPE, class STATE, class OP>
+	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &);
+
+	template <class INPUT_TYPE, class STATE, class OP>
+	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count);
+
+	template <class STATE, class OP>
+	static void Combine(const STATE &source, STATE &target, AggregateInputData &);
+
+	template <class T, class STATE>
+	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data);
+
+	static bool IgnoreNull();
+};
+
+//typedef std::function<void(const double &source, double &target)> CombineFunction;
+
+struct UDFSumFunction {
+
+//public:
+
+	template <class STATE>
+	static void Initialize(STATE &state);
+
+	template <class INPUT_TYPE, class STATE, class OP>
+	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &);
+
+	template <class INPUT_TYPE, class STATE, class OP>
+	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &, idx_t count);
+
+	template <class STATE, class OP>
+	static void Combine(const STATE &source, STATE &target, AggregateInputData &);
+
+	template <class T, class STATE>
+	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data);
+
+	static bool IgnoreNull();
+};
+
 struct DuckDBPyConnection : public enable_shared_from_this<DuckDBPyConnection> {
 private:
 	class Cursors {
@@ -230,6 +281,12 @@ public:
 	                  FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	                  PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR,
 	                  bool side_effects = false);
+
+	shared_ptr<DuckDBPyConnection> RegisterAggregateUDF(
+	    const string &name, const py::function &udf, const py::object &arguments = py::none(),
+	    const shared_ptr<DuckDBPyType> &return_type = nullptr, PythonUDFType type = PythonUDFType::NATIVE,
+	    FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
+	    PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR, bool side_effects = false);
 
 	shared_ptr<DuckDBPyConnection> UnregisterUDF(const string &name);
 
@@ -349,6 +406,12 @@ private:
 	                               const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
 	                               FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
 	                               bool side_effects);
+	CombineFuncPtr<double> CreateCombineUDF(const string &name, const py::function &udf,
+	                                const py::object &parameters,
+	                                const shared_ptr<DuckDBPyType> &return_type,
+	                                bool vectorized, FunctionNullHandling null_handling,
+	                                PythonExceptionHandling exception_handling,
+	                                bool side_effects);
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
 

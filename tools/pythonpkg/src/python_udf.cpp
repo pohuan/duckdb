@@ -1,6 +1,7 @@
 #include "duckdb/main/query_result.hpp"
 #include "duckdb_python/pybind11/pybind_wrapper.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/aggregate_state.hpp"
 #include "duckdb_python/pytype.hpp"
 #include "duckdb_python/pyconnection/pyconnection.hpp"
 #include "duckdb_python/pandas/pandas_scan.hpp"
@@ -17,6 +18,7 @@
 #include "duckdb/common/types/arrow_aux_data.hpp"
 #include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "duckdb/function/table/arrow/arrow_duck_schema.hpp"
+#include "duckdb_python/python_conversion.hpp"
 
 namespace duckdb {
 
@@ -357,6 +359,68 @@ static scalar_function_t CreateNativeFunction(PyObject *function, PythonExceptio
 	return func;
 }
 
+static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
+                                              const ClientProperties &client_properties,
+                                              FunctionNullHandling null_handling) {
+	// Follow create native function
+	CombineFuncPtr<double> func = [=](const double &source, double &target, AggregateInputData &) -> void { // NOLINT
+		py::gil_scoped_acquire gil;
+
+		const bool default_null_handling = null_handling == FunctionNullHandling::DEFAULT_NULL_HANDLING;
+
+		// owning references
+		vector<py::object> python_objects;
+		vector<PyObject *> python_results;
+		python_results.resize(1);
+		for (idx_t row = 0; row < 1; row++) {
+
+			auto bundled_parameters = py::tuple((int) 2);
+			bool contains_null = false;
+			for (idx_t i = 0; i < 2; i++) {
+				// Fill the tuple with the arguments for this row
+				double value;
+				if (i ==0)
+					value = source;
+				else
+					value = target;
+
+				bundled_parameters[i] =
+				    PythonObject::FromValue(value, duckdb::LogicalType(LogicalTypeId::DOUBLE), client_properties);
+			}
+			if (contains_null) {
+				// Immediately insert None, no need to call the function
+				python_objects.push_back(py::none());
+				python_results[row] = py::none().ptr();
+				continue;
+			}
+
+			// Call the function
+			auto ret = PyObject_CallObject(function, bundled_parameters.ptr());
+			if (ret == nullptr && PyErr_Occurred()) {
+				if (exception_handling == PythonExceptionHandling::FORWARD_ERROR) {
+					auto exception = py::error_already_set();
+					throw InvalidInputException("Python exception occurred while executing the UDF: %s",
+					                            exception.what());
+				} else if (exception_handling == PythonExceptionHandling::RETURN_NULL) {
+					PyErr_Clear();
+					ret = Py_None;
+				} else {
+					throw NotImplementedException("Exception handling type not implemented");
+				}
+			} else if ((!ret || ret == Py_None) && default_null_handling) {
+				throw InvalidInputException(NullHandlingError());
+			}
+			python_objects.push_back(py::reinterpret_steal<py::object>(ret));
+			python_results[row] = ret;
+		}
+
+		auto value = TransformPythonValue(python_results[0], duckdb::LogicalType(LogicalTypeId::DOUBLE), false);
+		target = value.GetValue<double>();
+	};
+	return func;
+}
+
+
 namespace {
 
 struct ParameterKind {
@@ -496,6 +560,17 @@ public:
 		                               nullptr, varargs, function_side_effects, null_handling);
 		return scalar_function;
 	}
+
+	CombineFuncPtr<double> GetCombineFunction(const py::function &udf, PythonExceptionHandling exception_handling,
+		                                      bool side_effects,
+	                           const ClientProperties &client_properties) {
+
+		auto &import_cache = *DuckDBPyConnection::ImportCache();
+		// Import this module, because importing this from a non-main thread causes a segfault
+		(void)import_cache.numpy.core.multiarray();
+
+		return CreateCombineFunction(udf.ptr(), exception_handling, client_properties, null_handling);
+	}
 };
 
 } // namespace
@@ -513,6 +588,22 @@ ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py:
 	data.OverrideReturnType(return_type);
 	data.Verify();
 	return data.GetFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
+}
+
+CombineFuncPtr<double> DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf,
+                                                   const py::object &parameters,
+                                                   const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                                   FunctionNullHandling null_handling,
+                                                   PythonExceptionHandling exception_handling, bool side_effects)
+{
+	PythonUDFData data(name, vectorized, null_handling);
+	auto &connection = con.GetConnection();
+
+	data.AnalyzeSignature(udf);
+	data.OverrideParameters(parameters);
+	data.OverrideReturnType(return_type);
+	data.Verify();
+	return data.GetCombineFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
 }
 
 } // namespace duckdb

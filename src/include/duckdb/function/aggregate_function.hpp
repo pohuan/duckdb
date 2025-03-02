@@ -13,6 +13,7 @@
 #include "duckdb/function/aggregate_state.hpp"
 #include "duckdb/planner/bound_result_modifier.hpp"
 #include "duckdb/planner/expression.hpp"
+#include <functional>
 
 namespace duckdb {
 
@@ -57,8 +58,12 @@ typedef void (*aggregate_initialize_t)(const AggregateFunction &function, data_p
 //! The type used for updating hashed aggregate functions
 typedef void (*aggregate_update_t)(Vector inputs[], AggregateInputData &aggr_input_data, idx_t input_count,
                                    Vector &state, idx_t count);
+
+
+// Define std::function type equivalent to aggregate_combine_t
+using aggregate_combine_t = std::function<void(Vector &, Vector &, AggregateInputData &, idx_t)>;
+
 //! The type used for combining hashed aggregate states
-typedef void (*aggregate_combine_t)(Vector &state, Vector &combined, AggregateInputData &aggr_input_data, idx_t count);
 //! The type used for finalizing hashed aggregate function payloads
 typedef void (*aggregate_finalize_t)(Vector &state, AggregateInputData &aggr_input_data, Vector &result, idx_t count,
                                      idx_t offset);
@@ -202,7 +207,8 @@ public:
 
 	bool operator==(const AggregateFunction &rhs) const {
 		return state_size == rhs.state_size && initialize == rhs.initialize && update == rhs.update &&
-		       combine == rhs.combine && finalize == rhs.finalize && window == rhs.window;
+		       combine.target<void (*)()>() == rhs.combine.target<void (*)()>() && finalize == rhs.finalize &&
+		       window == rhs.window;
 	}
 	bool operator!=(const AggregateFunction &rhs) const {
 		return !(*this == rhs);
@@ -226,6 +232,19 @@ public:
 		                         AggregateFunction::StateInitialize<STATE, OP, destructor_type>,
 		                         AggregateFunction::UnaryScatterUpdate<STATE, INPUT_TYPE, OP>,
 		                         AggregateFunction::StateCombine<STATE, OP>,
+		                         AggregateFunction::StateFinalize<STATE, RESULT_TYPE, OP>, null_handling,
+		                         AggregateFunction::UnaryUpdate<STATE, INPUT_TYPE, OP>);
+	}
+
+	template <class STATE, class INPUT_TYPE, class RESULT_TYPE, class OP,
+	          AggregateDestructorType destructor_type = AggregateDestructorType::STANDARD>
+	static AggregateFunction UnaryAggregate(
+					const LogicalType &input_type, LogicalType return_type, CombineFuncPtr<STATE> combineFunction,
+					FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING) {
+		return AggregateFunction({input_type}, return_type, AggregateFunction::StateSize<STATE>,
+		                         AggregateFunction::StateInitialize<STATE, OP, destructor_type>,
+		                         AggregateFunction::UnaryScatterUpdate<STATE, INPUT_TYPE, OP>,
+		                         AggregateFunction::GetAggregateCombineFunction<STATE>(combineFunction),
 		                         AggregateFunction::StateFinalize<STATE, RESULT_TYPE, OP>, null_handling,
 		                         AggregateFunction::UnaryUpdate<STATE, INPUT_TYPE, OP>);
 	}
@@ -313,6 +332,20 @@ public:
 	template <class STATE, class OP>
 	static void StateCombine(Vector &source, Vector &target, AggregateInputData &aggr_input_data, idx_t count) {
 		AggregateExecutor::Combine<STATE, OP>(source, target, aggr_input_data, count);
+	}
+
+	using AggregateCombineFunctionType = std::function<void(Vector &, Vector &, AggregateInputData &, idx_t)>;
+
+	template <typename STATE>
+	static aggregate_combine_t GetAggregateCombineFunction(CombineFuncPtr<STATE> combineFunction) {
+		// Return a function pointer that calls StateCombine with the given combineFunction
+
+		AggregateCombineFunctionType functionToReturn = [combineFunction](Vector & source, Vector & target,
+		                                              AggregateInputData & aggr_input_data, idx_t count) {
+			AggregateExecutor::Combine<STATE>(source, target, aggr_input_data, count, combineFunction);
+		};
+
+		 return functionToReturn;
 	}
 
 	template <class STATE, class RESULT_TYPE, class OP>
