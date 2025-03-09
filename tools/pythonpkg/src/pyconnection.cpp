@@ -491,8 +491,8 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(
 	CombineFuncPtr<double> aggregate_combine_function =
 	  CreateCombineUDF(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
 	                                       null_handling, exception_handling, side_effects);
-	AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
-	    "udf_sum_double", aggregate_combine_function);
+	AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(name, aggregate_combine_function);
+
 	//AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
 	//    "udf_sum_double", UDFSumFunction::Combine<double, UDFSumFunction>);
 	// UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>("udf_sum_double");
