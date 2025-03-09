@@ -621,6 +621,17 @@ CombineFuncPtr<double>
 DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::function &udf, const py::object &parameters,
                                              const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                              FunctionNullHandling null_handling,
-                                             PythonExceptionHandling exception_handling, bool side_effects);
+                                             PythonExceptionHandling exception_handling, bool side_effects) {
+	PythonUDFData data(name, vectorized, null_handling);
+	auto &connection = con.GetConnection();
+
+	data.AnalyzeSignature(udf);
+	data.OverrideParameters(parameters);
+	data.OverrideReturnType(return_type);
+	data.Verify();
+	return data.GetCombineFunction<double>(udf, exception_handling, side_effects,
+	                                       connection.context->GetClientProperties(), data.parameters,
+	                                       data.return_type);
+}
 
 } // namespace duckdb
