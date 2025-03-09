@@ -207,7 +207,8 @@ public:
 
 	bool operator==(const AggregateFunction &rhs) const {
 		return state_size == rhs.state_size && initialize == rhs.initialize && update == rhs.update &&
-		       combine.target<void (*)()>() == rhs.combine.target<void (*)()>() && finalize == rhs.finalize &&
+		       combine.target<void (*)()>() == rhs.combine.target<void (*)()>() &&
+		       finalize.target<void (*)()>() == rhs.finalize.target<void (*)()>() &&
 		       window == rhs.window;
 	}
 	bool operator!=(const AggregateFunction &rhs) const {
