@@ -361,7 +361,7 @@ static scalar_function_t CreateNativeFunction(PyObject *function, PythonExceptio
 
 static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
                                               const ClientProperties &client_properties,
-											  const vector<LogicalType> &parameters,
+											  const vector<LogicalType>& parameters,
                                               FunctionNullHandling null_handling) {
 	// Follow create native function
 	CombineFuncPtr<double> func = [=](const double &source, double &target, AggregateInputData &) -> void { // NOLINT
@@ -377,7 +377,7 @@ static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonEx
 
 			auto bundled_parameters = py::tuple((int) 2);
 			bool contains_null = false;
-			for (idx_t i = 0; i < parameters.count(); i++) {
+			for (idx_t i = 0; i < parameters.size(); i++) {
 				// Fill the tuple with the arguments for this row
 				double value;
 				if (i ==0)
