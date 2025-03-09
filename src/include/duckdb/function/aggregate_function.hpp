@@ -356,7 +356,7 @@ public:
 		// Return a function pointer that calls StateFinalize with the given finalize function
 
 		AggregateFinalizeFunctionType functionToReturn =
-		    [finalizeFunction](Vector &states, AggregateInputData &aggr_input_data, Vector &result, idx_t count, idx_t offset {
+		    [finalizeFunction](Vector &states, AggregateInputData &aggr_input_data, Vector &result, idx_t count, idx_t offset) {
 			AggregateExecutor::Finalize<STATE, T>(states, aggr_input_data, result, count, offset, finalizeFunction);
 		    };
 
