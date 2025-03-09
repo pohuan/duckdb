@@ -415,6 +415,12 @@ private:
 	                                PythonExceptionHandling exception_handling,
 	                                bool side_effects);
 
+	template <typename T, typename STATE_TYPE>
+	FinalizeFuncPtr<T, STATE_TYPE>
+	CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
+	                 const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
+	                 PythonExceptionHandling exception_handling, bool side_effects);
+
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
 

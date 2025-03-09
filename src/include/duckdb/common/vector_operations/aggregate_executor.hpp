@@ -353,6 +353,31 @@ public:
 		}
 	}
 
+	template <class STATE_TYPE, class RESULT_TYPE>
+	static void Finalize(Vector &states, AggregateInputData &aggr_input_data, Vector &result, idx_t count, idx_t offset,
+	                     FinalizeFuncPtr<STATE_TYPE, RESULT_TYPE> finalizeFunction) {
+		if (states.GetVectorType() == VectorType::CONSTANT_VECTOR) {
+			result.SetVectorType(VectorType::CONSTANT_VECTOR);
+
+			auto sdata = ConstantVector::GetData<STATE_TYPE *>(states);
+			auto rdata = ConstantVector::GetData<RESULT_TYPE>(result);
+			AggregateFinalizeData finalize_data(result, aggr_input_data);
+			finalizeFunction(**sdata, *rdata, finalize_data);
+		} else {
+			D_ASSERT(states.GetVectorType() == VectorType::FLAT_VECTOR);
+			result.SetVectorType(VectorType::FLAT_VECTOR);
+
+			auto sdata = FlatVector::GetData<STATE_TYPE *>(states);
+			auto rdata = FlatVector::GetData<RESULT_TYPE>(result);
+			AggregateFinalizeData finalize_data(result, aggr_input_data);
+			for (idx_t i = 0; i < count; i++) {
+				finalize_data.result_idx = i + offset;
+				finalizeFunction(*sdata[i], rdata[finalize_data.result_idx],
+				                                               finalize_data);
+			}
+		}
+	}
+
 	template <class STATE_TYPE, class OP>
 	static void Combine(Vector &source, Vector &target, AggregateInputData &aggr_input_data, idx_t count) {
 		D_ASSERT(source.GetType().id() == LogicalTypeId::POINTER && target.GetType().id() == LogicalTypeId::POINTER);
@@ -373,7 +398,7 @@ public:
 			auto sdata = ConstantVector::GetData<STATE_TYPE *>(states);
 			auto rdata = ConstantVector::GetData<RESULT_TYPE>(result);
 			AggregateFinalizeData finalize_data(result, aggr_input_data);
-			OP::template Finalize<RESULT_TYPE, STATE_TYPE>(**sdata, *rdata, finalize_data);
+			OP::template Finalize<STATE_TYPE, RESULT_TYPE>(**sdata, *rdata, finalize_data);
 		} else {
 			D_ASSERT(states.GetVectorType() == VectorType::FLAT_VECTOR);
 			result.SetVectorType(VectorType::FLAT_VECTOR);
@@ -383,7 +408,7 @@ public:
 			AggregateFinalizeData finalize_data(result, aggr_input_data);
 			for (idx_t i = 0; i < count; i++) {
 				finalize_data.result_idx = i + offset;
-				OP::template Finalize<RESULT_TYPE, STATE_TYPE>(*sdata[i], rdata[finalize_data.result_idx],
+				OP::template Finalize<STATE_TYPE, RESULT_TYPE>(*sdata[i], rdata[finalize_data.result_idx],
 				                                               finalize_data);
 			}
 		}

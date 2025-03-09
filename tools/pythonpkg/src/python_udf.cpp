@@ -358,6 +358,7 @@ static scalar_function_t CreateNativeFunction(PyObject *function, PythonExceptio
 	};
 	return func;
 }
+
 template <typename STATE_TYPE>
 static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
                                               const ClientProperties &client_properties,
@@ -383,6 +384,70 @@ static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, Pyth
 				// Fill the tuple with the arguments for this row
 				double value;
 				if (i ==0)
+					value = source;
+				else
+					value = target;
+
+				bundled_parameters[i] =
+				    PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
+			}
+			if (contains_null) {
+				// Immediately insert None, no need to call the function
+				python_objects.push_back(py::none());
+				python_results[row] = py::none().ptr();
+				continue;
+			}
+
+			// Call the function
+			auto ret = PyObject_CallObject(function, bundled_parameters.ptr());
+			if (ret == nullptr && PyErr_Occurred()) {
+				if (exception_handling == PythonExceptionHandling::FORWARD_ERROR) {
+					auto exception = py::error_already_set();
+					throw InvalidInputException("Python exception occurred while executing the UDF: %s",
+					                            exception.what());
+				} else if (exception_handling == PythonExceptionHandling::RETURN_NULL) {
+					PyErr_Clear();
+					ret = Py_None;
+				} else {
+					throw NotImplementedException("Exception handling type not implemented");
+				}
+			} else if ((!ret || ret == Py_None) && default_null_handling) {
+				throw InvalidInputException(NullHandlingError());
+			}
+			python_objects.push_back(py::reinterpret_steal<py::object>(ret));
+			python_results[row] = ret;
+		}
+
+		auto value = TransformPythonValue(python_results[0], duckdb::LogicalType(return_type), false);
+		target = value.GetValue<STATE_TYPE>();
+	};
+	return func;
+}
+
+// TODO: handle duplicate code
+template <typename STATE_TYPE, typename T>
+static FinalizeFuncPtr<STATE_TYPE, T>
+CreateFinalizeFunction(PyObject *function, PythonExceptionHandling exception_handling,
+                      const ClientProperties &client_properties, const vector<LogicalType> &parameters,
+                      const LogicalType &return_type, FunctionNullHandling null_handling) {
+
+	FinalizeFuncPtr<STATE_TYPE, T> func = [=](STATE &state, T &target, AggregateFinalizeData &finalize_data) -> void { // NOLINT
+		py::gil_scoped_acquire gil;
+
+		const bool default_null_handling = null_handling == FunctionNullHandling::DEFAULT_NULL_HANDLING;
+
+		// owning references
+		vector<py::object> python_objects;
+		vector<PyObject *> python_results;
+		python_results.resize(1);
+		for (idx_t row = 0; row < 1; row++) {
+
+			auto bundled_parameters = py::tuple((int)2);
+			bool contains_null = false;
+			for (idx_t i = 0; i < parameters.size(); i++) {
+				// Fill the tuple with the arguments for this row
+				double value;
+				if (i == 0)
 					value = source;
 				else
 					value = target;
@@ -579,6 +644,20 @@ public:
 
 		return CreateCombineFunction<STATE_TYPE>(udf.ptr(), exception_handling, client_properties, parameters, return_type, null_handling);
 	}
+
+	template <typename STATE_TYPE, typename T>
+	FinalizeFuncPtr<STATE_TYPE, T> GetFinalizeFunction(const py::function &udf, PythonExceptionHandling exception_handling,
+	                                              bool side_effects, const ClientProperties &client_properties,
+	                                              const vector<LogicalType> &parameters,
+	                                              const LogicalType &return_type) {
+
+		auto &import_cache = *DuckDBPyConnection::ImportCache();
+		// Import this module, because importing this from a non-main thread causes a segfault
+		(void)import_cache.numpy.core.multiarray();
+
+		return CreateFinalizeFunction<STATE_TYPE, T>(udf.ptr(), exception_handling, client_properties, parameters,
+		                                         return_type, null_handling);
+	}
 };
 
 } // namespace
@@ -614,6 +693,24 @@ CombineFuncPtr<STATE_TYPE> DuckDBPyConnection::CreateCombineUDF(const string &na
 	data.OverrideReturnType(return_type);
 	data.Verify();
 	return data.GetCombineFunction<STATE_TYPE>(udf, exception_handling, side_effects, connection.context->GetClientProperties(), data.parameters, data.return_type);
+}
+
+template <typename STATE_TYPE, typename T>
+FinalizeFuncPtr<STATE_TYPE, T>
+DuckDBPyConnection::CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
+                                     const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                     FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
+                                     bool side_effects) {
+	PythonUDFData data(name, vectorized, null_handling);
+	auto &connection = con.GetConnection();
+
+	data.AnalyzeSignature(udf);
+	data.OverrideParameters(parameters);
+	data.OverrideReturnType(return_type);
+	data.Verify();
+	return data.GetFinalizeFunction<STATE_TYPE, T>(udf, exception_handling, side_effects,
+	                                           connection.context->GetClientProperties(), data.parameters,
+	                                           data.return_type);
 }
 
 template
