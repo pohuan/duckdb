@@ -46,9 +46,9 @@ con.execute("""
     )
 #con.create_function("random_name", generate_random_name, [], VARCHAR)
 #con.create_aggregate_function("udf_avg", generate_random_name, [], DOUBLE)
-con.create_aggregate_function("udf_sum", test_python_udf, [DOUBLE, DOUBLE], DOUBLE)
+con.create_aggregate_function("udf_X", test_python_udf, [DOUBLE, DOUBLE], DOUBLE)
 result = con.execute("""
-        SELECT udf_sum_double(amount) FROM sales
+        SELECT udf_X(amount) FROM sales
         """
         ).fetchall()
 print(result)
