@@ -430,8 +430,9 @@ static bool ModuleIsLoaded() {
 
 // Prevent implicit instantiation in multiple translation units
 extern template CombineFuncPtr<double>
-DuckDBPyConnection::CreateCombineUDF<double>(const std::string &, const py::function &, const py::object &,
-                                             const std::shared_ptr<DuckDBPyType> &, bool, FunctionNullHandling,
-                                             PythonExceptionHandling, bool);
+DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::function &udf, const py::object &parameters,
+                                             const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                             FunctionNullHandling null_handling,
+                                             PythonExceptionHandling exception_handling, bool side_effects);
 
 } // namespace duckdb
