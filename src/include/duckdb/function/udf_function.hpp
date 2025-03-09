@@ -380,7 +380,7 @@ private:
 	inline static AggregateFunction CreateUnaryAggregateFunction(const string &name, const LogicalType &ret_type,
 	                                                             const LogicalType &input_type,
 	                                                             CombineFuncPtr<STATE> combineFunction,
-																 FinalizeFuncPtr<TR, STATE> finalizeFunction) {
+																FinalizeFuncPtr<TR, STATE> finalizeFunction) {
 		AggregateFunction aggr_function =
 		    AggregateFunction::UnaryAggregate<STATE, TR, TA, UDF_OP>(input_type, ret_type, combineFunction, finalizeFunction);
 		aggr_function.name = name;

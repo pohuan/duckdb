@@ -103,7 +103,7 @@ template <typename STATE_TYPE>
 using CombineFuncPtr = std::function<void(const STATE_TYPE &, STATE_TYPE &, AggregateInputData &)>;
 
 template <class STATE, class T>
-using FinalizeFuncPtr = std::function<void(STATE &state, T &target, AggregateFinalizeData &finalize_data);
+using FinalizeFuncPtr = std::function<void(STATE &state, T &target, AggregateFinalizeData &finalize_data)>;
 
 
 } // namespace duckdb
