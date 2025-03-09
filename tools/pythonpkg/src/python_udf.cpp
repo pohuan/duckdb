@@ -577,7 +577,7 @@ public:
 		// Import this module, because importing this from a non-main thread causes a segfault
 		(void)import_cache.numpy.core.multiarray();
 
-		return CreateCombineFunction<STATE_TYPE>(udf.ptr(), exception_handling, client_properties, parameters, null_handling);
+		return CreateCombineFunction<STATE_TYPE>(udf.ptr(), exception_handling, client_properties, parameters, return_type, null_handling);
 	}
 };
 
