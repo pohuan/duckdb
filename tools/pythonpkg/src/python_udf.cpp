@@ -616,7 +616,7 @@ CombineFuncPtr<STATE_TYPE> DuckDBPyConnection::CreateCombineUDF(const string &na
 	return data.GetCombineFunction<STATE_TYPE>(udf, exception_handling, side_effects, connection.context->GetClientProperties(), data.parameters, data.return_type);
 }
 
-template <>
+template
 CombineFuncPtr<double>
 DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::function &udf, const py::object &parameters,
                                              const shared_ptr<DuckDBPyType> &return_type, bool vectorized,

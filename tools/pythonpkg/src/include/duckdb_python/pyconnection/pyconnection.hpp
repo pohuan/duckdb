@@ -414,6 +414,13 @@ private:
 	                                bool vectorized, FunctionNullHandling null_handling,
 	                                PythonExceptionHandling exception_handling,
 	                                bool side_effects);
+
+	// Prevent implicit instantiation in multiple translation units
+	extern template CombineFuncPtr<double>
+	DuckDBPyConnection::CreateCombineUDF<double>(const std::string &, const py::function &, const py::object &,
+	                                             const std::shared_ptr<DuckDBPyType> &, bool, FunctionNullHandling,
+	                                             PythonExceptionHandling, bool);
+
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
 
