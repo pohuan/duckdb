@@ -376,7 +376,7 @@ static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonEx
 
 			auto bundled_parameters = py::tuple((int) 2);
 			bool contains_null = false;
-			for (idx_t i = 0; i < 2; i++) {
+			for (idx_t i = 0; i < parameters.count(); i++) {
 				// Fill the tuple with the arguments for this row
 				double value;
 				if (i ==0)
@@ -385,7 +385,7 @@ static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonEx
 					value = target;
 
 				bundled_parameters[i] =
-				    PythonObject::FromValue(value, duckdb::LogicalType(LogicalTypeId::DOUBLE), client_properties);
+				    PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
 			}
 			if (contains_null) {
 				// Immediately insert None, no need to call the function
