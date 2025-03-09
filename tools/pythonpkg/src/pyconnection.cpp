@@ -2428,4 +2428,11 @@ bool DuckDBPyConnection::IsAcceptedArrowObject(const py::object &object) {
 	return DuckDBPyConnection::GetArrowType(object) != PyArrowObjectType::Invalid;
 }
 
+template <>
+CombineFuncPtr<double>
+DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::function &udf, const py::object &parameters,
+                                             const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                             FunctionNullHandling null_handling,
+                                             PythonExceptionHandling exception_handling, bool side_effects);
+
 } // namespace duckdb
