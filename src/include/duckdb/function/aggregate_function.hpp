@@ -65,8 +65,8 @@ using aggregate_combine_t = std::function<void(Vector &, Vector &, AggregateInpu
 
 //! The type used for combining hashed aggregate states
 //! The type used for finalizing hashed aggregate function payloads
-typedef void (*aggregate_finalize_t)(Vector &state, AggregateInputData &aggr_input_data, Vector &result, idx_t count,
-                                     idx_t offset);
+using aggregate_finalize_t = std::function<void(Vector &state, AggregateInputData &aggr_input_data, Vector &result, idx_t count,
+                                     idx_t offset)>;
 //! The type used for propagating statistics in aggregate functions (optional)
 typedef unique_ptr<BaseStatistics> (*aggregate_statistics_t)(ClientContext &context, BoundAggregateExpression &expr,
                                                              AggregateStatisticsInput &input);
