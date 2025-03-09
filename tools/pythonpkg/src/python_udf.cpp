@@ -358,13 +358,15 @@ static scalar_function_t CreateNativeFunction(PyObject *function, PythonExceptio
 	};
 	return func;
 }
-
-static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
+template <typename STATE_TYPE>
+static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
                                               const ClientProperties &client_properties,
 											  const vector<LogicalType>& parameters,
+											  const LogicalType &return_type,
                                               FunctionNullHandling null_handling) {
 	// Follow create native function
-	CombineFuncPtr<double> func = [=](const double &source, double &target, AggregateInputData &) -> void { // NOLINT
+	CombineFuncPtr<STATE_TYPE> func = [=](const STATE_TYPE &source, STATE_TYPE &target,
+	                                      AggregateInputData &) -> void { // NOLINT
 		py::gil_scoped_acquire gil;
 
 		const bool default_null_handling = null_handling == FunctionNullHandling::DEFAULT_NULL_HANDLING;
@@ -415,8 +417,8 @@ static CombineFuncPtr<double> CreateCombineFunction(PyObject *function, PythonEx
 			python_results[row] = ret;
 		}
 
-		auto value = TransformPythonValue(python_results[0], duckdb::LogicalType(LogicalTypeId::DOUBLE), false);
-		target = value.GetValue<double>();
+		auto value = TransformPythonValue(python_results[0], duckdb::LogicalType(return_type), false);
+		target = value.GetValue<STATE_TYPE>();
 	};
 	return func;
 }
@@ -562,18 +564,20 @@ public:
 		return scalar_function;
 	}
 
-	CombineFuncPtr<double> GetCombineFunction
+	template <typename STATE_TYPE>
+	CombineFuncPtr<STATE_TYPE> GetCombineFunction
 		(const py::function &udf,
 		 PythonExceptionHandling exception_handling,
 		 bool side_effects,
 	     const ClientProperties &client_properties,
-	     const vector<LogicalType>& parameters) {
+	     const vector<LogicalType>& parameters,
+		 const LogicalType& return_type) {
 
 		auto &import_cache = *DuckDBPyConnection::ImportCache();
 		// Import this module, because importing this from a non-main thread causes a segfault
 		(void)import_cache.numpy.core.multiarray();
 
-		return CreateCombineFunction(udf.ptr(), exception_handling, client_properties, parameters, null_handling);
+		return CreateCombineFunction<STATE_TYPE>(udf.ptr(), exception_handling, client_properties, parameters, null_handling);
 	}
 };
 
@@ -594,7 +598,8 @@ ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py:
 	return data.GetFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
 }
 
-CombineFuncPtr<double> DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf,
+template <typename STATE_TYPE>
+CombineFuncPtr<STATE_TYPE> DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf,
                                                    const py::object &parameters,
                                                    const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                                    FunctionNullHandling null_handling,
