@@ -598,6 +598,14 @@ ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py:
 	return data.GetFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
 }
 
+template <>
+CombineFuncPtr<double>
+DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::function &udf, const py::object &parameters,
+                                             const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                             FunctionNullHandling null_handling,
+                                             PythonExceptionHandling exception_handling, bool side_effects);
+
+
 template <typename STATE_TYPE>
 CombineFuncPtr<STATE_TYPE> DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf,
                                                    const py::object &parameters,
