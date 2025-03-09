@@ -240,7 +240,7 @@ public:
 	          AggregateDestructorType destructor_type = AggregateDestructorType::STANDARD>
 	static AggregateFunction UnaryAggregate(
 					const LogicalType &input_type, LogicalType return_type, CombineFuncPtr<STATE> combineFunction,
-	               FinalizeFunctionPtr<STATE, RESULT_TYPE> finalizeFunction,
+	               FinalizeFuncPtr<STATE, RESULT_TYPE> finalizeFunction,
 					FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING) {
 		return AggregateFunction({input_type}, return_type, AggregateFunction::StateSize<STATE>,
 		                         AggregateFunction::StateInitialize<STATE, OP, destructor_type>,
