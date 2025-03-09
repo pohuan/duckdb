@@ -408,7 +408,7 @@ private:
 	                               bool side_effects);
 
 	template <typename STATE_TYPE>
-	CombineFuncPtr<double> CreateCombineUDF(const string &name, const py::function &udf,
+	CombineFuncPtr<STATE_TYPE> CreateCombineUDF(const string &name, const py::function &udf,
 	                                const py::object &parameters,
 	                                const shared_ptr<DuckDBPyType> &return_type,
 	                                bool vectorized, FunctionNullHandling null_handling,
