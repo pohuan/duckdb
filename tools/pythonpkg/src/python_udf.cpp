@@ -612,7 +612,7 @@ CombineFuncPtr<STATE_TYPE> DuckDBPyConnection::CreateCombineUDF(const string &na
 	data.OverrideParameters(parameters);
 	data.OverrideReturnType(return_type);
 	data.Verify();
-	return data.GetCombineFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties(), data.parameters);
+	return data.GetCombineFunction<STATE_TYPE>(udf, exception_handling, side_effects, connection.context->GetClientProperties(), data.parameters);
 }
 
 } // namespace duckdb
