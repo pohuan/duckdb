@@ -121,6 +121,16 @@
 			{
 				"name": "finalizefunction",
 				"type": "function"
+			},
+			{
+				"name": "finalizeParameters",
+				"type": "Optional[List[DuckDBPyType]]",
+				"default": "None"
+			},
+			{
+				"name": "finalizeReturn_type",
+				"type": "Optional[DuckDBPyType]",
+				"default": "None"
 			}
 		],
 		"kwargs": [
