@@ -408,15 +408,22 @@ private:
 	                               bool side_effects);
 
 	template <typename STATE_TYPE>
-	CombineFuncPtr<STATE_TYPE> CreateCombineUDF(const string &name, const py::function &udf,
+	using CombineFuncPtrTest = std::function<void(const STATE_TYPE &, STATE_TYPE &, AggregateInputData &)>;
+
+	template <typename STATE_TYPE>
+	CombineFuncPtrTest<STATE_TYPE>
+	CreateCombineUDF(const string &name, const py::function &udf,
 	                                const py::object &parameters,
 	                                const shared_ptr<DuckDBPyType> &return_type,
 	                                bool vectorized, FunctionNullHandling null_handling,
 	                                PythonExceptionHandling exception_handling,
 	                                bool side_effects);
 
+	template <class STATE, class T>
+	using FinalizeFuncPtrTest = std::function<void(STATE &state, T &target, AggregateFinalizeData &finalize_data)>;
+
 	template <typename T, typename STATE_TYPE>
-	FinalizeFuncPtr<T, STATE_TYPE>
+	FinalizeFuncPtrTest<T, STATE_TYPE>
 	CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
 	                 const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
 	                 PythonExceptionHandling exception_handling, bool side_effects);
