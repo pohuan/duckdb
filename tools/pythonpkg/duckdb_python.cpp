@@ -144,14 +144,20 @@ static void InitializeConnectionMethods(py::module_ &m) {
 	m.def(
 	    "create_aggregate_function",
 	    [](const string &name, const py::function &udf, const py::object &arguments = py::none(),
-	       const shared_ptr<DuckDBPyType> &return_type = nullptr, PythonUDFType type = PythonUDFType::NATIVE,
+	       const shared_ptr<DuckDBPyType> &return_type = nullptr,
+			const py::function &finalize_udf,
+	       const py::object &finalize_arguments = py::none(),
+	       const shared_ptr<DuckDBPyType> &finalize_return_type = nullptr
+		   PythonUDFType type = PythonUDFType::NATIVE,
 	       FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	       PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR,
 	       bool side_effects = false, shared_ptr<DuckDBPyConnection> conn = nullptr) {
 		    if (!conn) {
 			    conn = DuckDBPyConnection::DefaultConnection();
 		    }
-		    return conn->RegisterAggregateUDF(name, udf, arguments, return_type, type, null_handling,
+		    return conn->RegisterAggregateUDF(name, udf, arguments, return_type, finalize_udf, finalize_arguments,
+		                                      finalize_return_type,
+											type, null_handling,
 		                                      exception_handling, side_effects);
 	    },
 	    "Create a DuckDB function out of the passing in Python function so it can be used in queries", py::arg("name"),

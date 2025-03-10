@@ -470,7 +470,11 @@ bool UDFSumFunction::IgnoreNull() {
 
 shared_ptr<DuckDBPyConnection>
 DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function &udf, const py::object &arguments,
-                                         const shared_ptr<DuckDBPyType> &return_type, PythonUDFType type,
+                                         const shared_ptr<DuckDBPyType> &return_type,
+										 const py::object &finalize_udf,
+                                         const py::object &finalize_arguments,
+										const shared_ptr<DuckDBPyType> &finalize_return_type,		
+											PythonUDFType type,
                                          FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
                                          bool side_effects) {
 	auto &connection = con.GetConnection();
@@ -490,8 +494,8 @@ DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function 
 	    CreateCombineUDF<double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW, null_handling,
 	                             exception_handling, side_effects);
 
-	FinalizeFuncPtr<double, double> aggregate_finalize_function =
-	    CreateFinalizeUDF<double, double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
+	FinalizeFuncPtr<double, double> aggregate_finalize_function = CreateFinalizeUDF<double, double>(
+	    name, finalize_udf, finalize_arguments, finalize_return_type, type == PythonUDFType::ARROW,
 	                                      null_handling, exception_handling, side_effects);
 
 	AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
