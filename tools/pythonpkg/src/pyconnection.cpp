@@ -143,7 +143,8 @@ static void InitializeConnectionMethods(py::class_<DuckDBPyConnection, shared_pt
 	m.def("create_aggregate_function", &DuckDBPyConnection::RegisterAggregateUDF,
 	      "Create a DuckDB function out of the passing in Python function so it can be used in queries",
 	      py::arg("name"), py::arg("function"), py::arg("parameters") = py::none(), py::arg("return_type") = py::none(),
-	      py::arg("finalizefunction"), py::kw_only(), py::arg("type") = PythonUDFType::NATIVE,
+	      py::arg("finalizefunction"), py::arg("finalizeParameters") = py::none(),
+	      py::arg("finalizeReturn_type") = py::none(), py::kw_only(), py::arg("type") = PythonUDFType::NATIVE,
 	      py::arg("null_handling") = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	      py::arg("exception_handling") = PythonExceptionHandling::FORWARD_ERROR, py::arg("side_effects") = false);
 	m.def("remove_function", &DuckDBPyConnection::UnregisterUDF, "Remove a previously created function",

@@ -444,4 +444,5 @@ DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::funct
                                              const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                              FunctionNullHandling null_handling,
                                              PythonExceptionHandling exception_handling, bool side_effects);
+
 } // namespace duckdb
