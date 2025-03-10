@@ -117,6 +117,10 @@
 				"name": "return_type",
 				"type": "Optional[DuckDBPyType]",
 				"default": "None"
+			},
+			{
+				"name": "finalizefunction",
+				"type": "function"
 			}
 		],
 		"kwargs": [
