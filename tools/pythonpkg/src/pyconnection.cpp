@@ -491,14 +491,14 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(
 	CombineFuncPtr<double> aggregate_combine_function =
 	  CreateCombineUDF<double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
 	                                       null_handling, exception_handling, side_effects);
-	/*
+	
 	FinalizeFuncPtr<double, double> aggregate_finalize_function =
 	    CreateFinalizeUDF<double, double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
 	                                      null_handling, exception_handling, side_effects);
-	*/
+
 
 	AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
-	    name, aggregate_combine_function);
+	    name, aggregate_combine_function, aggregate_finalize_function);
 	
 	CreateAggregateFunctionInfo info(aggregate_function);
 	context.RegisterFunction(info);
