@@ -382,7 +382,8 @@ static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, Pyth
 			bool contains_null = false;
 			for (idx_t i = 0; i < parameters.size(); i++) {
 				// Fill the tuple with the arguments for this row
-				double value;
+				// TODO: avoid copy
+				STATE_TYPE value;
 				if (i ==0)
 					value = source;
 				else
@@ -431,7 +432,7 @@ CreateFinalizeFunction(PyObject *function, PythonExceptionHandling exception_han
                       const ClientProperties &client_properties, const vector<LogicalType> &parameters,
                       const LogicalType &return_type, FunctionNullHandling null_handling) {
 
-	FinalizeFuncPtr<STATE_TYPE, T> func = [=](STATE &state, T &target, AggregateFinalizeData &finalize_data) -> void { // NOLINT
+	FinalizeFuncPtr<STATE_TYPE, T> func = [=](STATE_TYPE &state, T &target, AggregateFinalizeData &finalize_data) -> void { // NOLINT
 		py::gil_scoped_acquire gil;
 
 		const bool default_null_handling = null_handling == FunctionNullHandling::DEFAULT_NULL_HANDLING;
@@ -446,15 +447,19 @@ CreateFinalizeFunction(PyObject *function, PythonExceptionHandling exception_han
 			bool contains_null = false;
 			for (idx_t i = 0; i < parameters.size(); i++) {
 				// Fill the tuple with the arguments for this row
-				double value;
 				if (i == 0)
-					value = source;
+				{
+					STATE_TYPE value = state;
+					bundled_parameters[i] = PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
+				}
 				else
-					value = target;
-
-				bundled_parameters[i] =
-				    PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
+				{
+					T value = target;
+					bundled_parameters[i] =
+					    PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
+				}
 			}
+
 			if (contains_null) {
 				// Immediately insert None, no need to call the function
 				python_objects.push_back(py::none());

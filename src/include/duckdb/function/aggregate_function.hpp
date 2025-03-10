@@ -239,6 +239,19 @@ public:
 
 	template <class STATE, class INPUT_TYPE, class RESULT_TYPE, class OP,
 	          AggregateDestructorType destructor_type = AggregateDestructorType::STANDARD>
+	static AggregateFunction
+	UnaryAggregate(const LogicalType &input_type, LogicalType return_type, CombineFuncPtr<STATE> combineFunction,
+	               FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING) {
+		return AggregateFunction({input_type}, return_type, AggregateFunction::StateSize<STATE>,
+		                         AggregateFunction::StateInitialize<STATE, OP, destructor_type>,
+		                         AggregateFunction::UnaryScatterUpdate<STATE, INPUT_TYPE, OP>,
+		                         AggregateFunction::GetAggregateCombineFunction<STATE>(combineFunction),
+		                         AggregateFunction::StateFinalize<STATE, RESULT_TYPE, OP>,
+		                         null_handling, AggregateFunction::UnaryUpdate<STATE, INPUT_TYPE, OP>);
+	}
+
+	template <class STATE, class INPUT_TYPE, class RESULT_TYPE, class OP,
+	          AggregateDestructorType destructor_type = AggregateDestructorType::STANDARD>
 	static AggregateFunction UnaryAggregate(
 					const LogicalType &input_type, LogicalType return_type, CombineFuncPtr<STATE> combineFunction,
 	               FinalizeFuncPtr<STATE, RESULT_TYPE> finalizeFunction,

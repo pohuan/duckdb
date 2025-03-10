@@ -84,6 +84,11 @@ public:
 		return CreateUnaryAggregateFunction<UDF_OP, STATE, TR, TA>(name, combineFunction, finalizeFunction);
 	}
 
+	template <typename UDF_OP, typename STATE, typename TR, typename TA>
+	inline static AggregateFunction CreateAggregateFunction(const string &name, CombineFuncPtr<STATE> combineFunction) {
+		return CreateUnaryAggregateFunction<UDF_OP, STATE, TR, TA>(name, combineFunction);
+	}
+
 	template <typename UDF_OP, typename STATE, typename TR, typename TA, typename TB>
 	inline static AggregateFunction CreateAggregateFunction(const string &name) {
 		return CreateBinaryAggregateFunction<UDF_OP, STATE, TR, TA, TB>(name);
@@ -368,10 +373,28 @@ private:
 	}
 
 	template <typename UDF_OP, typename STATE, typename TR, typename TA>
+	inline static AggregateFunction CreateUnaryAggregateFunction(const string &name,
+	                                                             CombineFuncPtr<STATE> combineFunction) {
+		LogicalType return_type = GetArgumentType<TR>();
+		LogicalType input_type = GetArgumentType<TA>();
+		return CreateUnaryAggregateFunction<UDF_OP, STATE, TR, TA>(name, return_type, input_type, combineFunction);
+	}
+
+	template <typename UDF_OP, typename STATE, typename TR, typename TA>
 	inline static AggregateFunction CreateUnaryAggregateFunction(const string &name, const LogicalType &ret_type,
 	                                                             const LogicalType &input_type) {
 		AggregateFunction aggr_function =
 		    AggregateFunction::UnaryAggregate<STATE, TR, TA, UDF_OP>(input_type, ret_type);
+		aggr_function.name = name;
+		return aggr_function;
+	}
+
+	template <typename UDF_OP, typename STATE, typename TR, typename TA>
+	inline static AggregateFunction
+	CreateUnaryAggregateFunction(const string &name, const LogicalType &ret_type, const LogicalType &input_type,
+	                             CombineFuncPtr<STATE> combineFunction) {
+		AggregateFunction aggr_function = AggregateFunction::UnaryAggregate<STATE, TR, TA, UDF_OP>(
+		    input_type, ret_type, combineFunction);
 		aggr_function.name = name;
 		return aggr_function;
 	}
