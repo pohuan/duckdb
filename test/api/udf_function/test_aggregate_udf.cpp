@@ -108,7 +108,10 @@ TEST_CASE("Aggregate UDFs", "[coverage][.]") {
 	}
 
 	std::function<void(Vector &, AggregateInputData &, Vector &, idx_t, idx_t)> finalize_func =
-	    &UDFSum::Finalize<UDFSum::sum_state_t, double>;
+	    [](Vector &states, AggregateInputData &aggr, Vector &result, idx_t count, idx_t offset) {
+		    UDFSum::Finalize<UDFSum::sum_state_t, double>(states, aggr, result, count, offset);
+	    };
+
 	SECTION("Testing the generic CreateAggregateFunction()") {
 		REQUIRE_NOTHROW(con.CreateAggregateFunction(
 		    "udf_sum", {LogicalType::DOUBLE}, LogicalType::DOUBLE, &UDFSum::StateSize<UDFSum::sum_state_t>,
