@@ -173,11 +173,11 @@ struct UDFAverageFunction {
 	static bool IgnoreNull();
 };
 
-//typedef std::function<void(const double &source, double &target)> CombineFunction;
+// typedef std::function<void(const double &source, double &target)> CombineFunction;
 
 struct UDFSumFunction {
 
-//public:
+	// public:
 
 	template <class STATE>
 	static void Initialize(STATE &state);
@@ -412,12 +412,9 @@ private:
 
 	template <typename STATE_TYPE>
 	CombineFuncPtrTest<STATE_TYPE>
-	CreateCombineUDF(const string &name, const py::function &udf,
-	                                const py::object &parameters,
-	                                const shared_ptr<DuckDBPyType> &return_type,
-	                                bool vectorized, FunctionNullHandling null_handling,
-	                                PythonExceptionHandling exception_handling,
-	                                bool side_effects);
+	CreateCombineUDF(const string &name, const py::function &udf, const py::object &parameters,
+	                 const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
+	                 PythonExceptionHandling exception_handling, bool side_effects);
 
 	template <class STATE, class T>
 	using FinalizeFuncPtrTest = std::function<void(STATE &state, T &target, AggregateFinalizeData &finalize_data)>;
@@ -425,8 +422,8 @@ private:
 	template <typename T, typename STATE_TYPE>
 	FinalizeFuncPtrTest<T, STATE_TYPE>
 	CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
-	                 const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
-	                 PythonExceptionHandling exception_handling, bool side_effects);
+	                  const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
+	                  PythonExceptionHandling exception_handling, bool side_effects);
 
 	void RegisterArrowObject(const py::object &arrow_object, const string &name);
 	vector<unique_ptr<SQLStatement>> GetStatements(const py::object &query);
@@ -447,5 +444,4 @@ DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::funct
                                              const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                              FunctionNullHandling null_handling,
                                              PythonExceptionHandling exception_handling, bool side_effects);
-
 } // namespace duckdb

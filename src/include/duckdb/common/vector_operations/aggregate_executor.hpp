@@ -372,8 +372,7 @@ public:
 			AggregateFinalizeData finalize_data(result, aggr_input_data);
 			for (idx_t i = 0; i < count; i++) {
 				finalize_data.result_idx = i + offset;
-				finalizeFunction(*sdata[i], rdata[finalize_data.result_idx],
-				                                               finalize_data);
+				finalizeFunction(*sdata[i], rdata[finalize_data.result_idx], finalize_data);
 			}
 		}
 	}

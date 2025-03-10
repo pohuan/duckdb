@@ -143,7 +143,7 @@ static void InitializeConnectionMethods(py::class_<DuckDBPyConnection, shared_pt
 	m.def("create_aggregate_function", &DuckDBPyConnection::RegisterAggregateUDF,
 	      "Create a DuckDB function out of the passing in Python function so it can be used in queries",
 	      py::arg("name"), py::arg("function"), py::arg("parameters") = py::none(), py::arg("return_type") = py::none(),
-	      py::kw_only(), py::arg("type") = PythonUDFType::NATIVE,
+	      py::arg("finalizefunction"), py::kw_only(), py::arg("type") = PythonUDFType::NATIVE,
 	      py::arg("null_handling") = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	      py::arg("exception_handling") = PythonExceptionHandling::FORWARD_ERROR, py::arg("side_effects") = false);
 	m.def("remove_function", &DuckDBPyConnection::UnregisterUDF, "Remove a previously created function",
@@ -435,7 +435,6 @@ bool UDFAverageFunction::IgnoreNull() {
 	return true;
 }
 
-
 // Simplication to double and single field to start python udf aggregation work.
 // Need to add back complex and composite type later.
 template <class STATE>
@@ -468,13 +467,11 @@ bool UDFSumFunction::IgnoreNull() {
 	return true;
 }
 
-
-shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(
-    const string &name, const py::function &udf, const py::object &arguments,
-    const shared_ptr<DuckDBPyType> &return_type, PythonUDFType type,
-    FunctionNullHandling null_handling,
-    PythonExceptionHandling exception_handling, bool side_effects)
-{
+shared_ptr<DuckDBPyConnection>
+DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function &udf, const py::object &arguments,
+                                         const shared_ptr<DuckDBPyType> &return_type, PythonUDFType type,
+                                         FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
+                                         bool side_effects) {
 	auto &connection = con.GetConnection();
 	auto &context = *connection.context;
 
@@ -489,17 +486,16 @@ shared_ptr<DuckDBPyConnection> DuckDBPyConnection::RegisterAggregateUDF(
 
 	// TODO: figure out strange c++ template and python co-op issue.
 	CombineFuncPtr<double> aggregate_combine_function =
-	  CreateCombineUDF<double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
-	                                       null_handling, exception_handling, side_effects);
-	
+	    CreateCombineUDF<double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW, null_handling,
+	                             exception_handling, side_effects);
+
 	FinalizeFuncPtr<double, double> aggregate_finalize_function =
 	    CreateFinalizeUDF<double, double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
 	                                      null_handling, exception_handling, side_effects);
 
-
 	AggregateFunction aggregate_function = UDFWrapper::CreateAggregateFunction<UDFSumFunction, double, double, double>(
 	    name, aggregate_combine_function, aggregate_finalize_function);
-	
+
 	CreateAggregateFunctionInfo info(aggregate_function);
 	context.RegisterFunction(info);
 

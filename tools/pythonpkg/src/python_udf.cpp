@@ -360,11 +360,10 @@ static scalar_function_t CreateNativeFunction(PyObject *function, PythonExceptio
 }
 
 template <typename STATE_TYPE>
-static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
-                                              const ClientProperties &client_properties,
-											  const vector<LogicalType>& parameters,
-											  const LogicalType &return_type,
-                                              FunctionNullHandling null_handling) {
+static CombineFuncPtr<STATE_TYPE>
+CreateCombineFunction(PyObject *function, PythonExceptionHandling exception_handling,
+                      const ClientProperties &client_properties, const vector<LogicalType> &parameters,
+                      const LogicalType &return_type, FunctionNullHandling null_handling) {
 	// Follow create native function
 	CombineFuncPtr<STATE_TYPE> func = [=](const STATE_TYPE &source, STATE_TYPE &target,
 	                                      AggregateInputData &) -> void { // NOLINT
@@ -378,13 +377,13 @@ static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, Pyth
 		python_results.resize(1);
 		for (idx_t row = 0; row < 1; row++) {
 
-			auto bundled_parameters = py::tuple((int) 2);
+			auto bundled_parameters = py::tuple((int)2);
 			bool contains_null = false;
 			for (idx_t i = 0; i < parameters.size(); i++) {
 				// Fill the tuple with the arguments for this row
 				// TODO: avoid copy
 				STATE_TYPE value;
-				if (i ==0)
+				if (i == 0)
 					value = source;
 				else
 					value = target;
@@ -429,10 +428,11 @@ static CombineFuncPtr<STATE_TYPE> CreateCombineFunction(PyObject *function, Pyth
 template <typename STATE_TYPE, typename T>
 static FinalizeFuncPtr<STATE_TYPE, T>
 CreateFinalizeFunction(PyObject *function, PythonExceptionHandling exception_handling,
-                      const ClientProperties &client_properties, const vector<LogicalType> &parameters,
-                      const LogicalType &return_type, FunctionNullHandling null_handling) {
+                       const ClientProperties &client_properties, const vector<LogicalType> &parameters,
+                       const LogicalType &return_type, FunctionNullHandling null_handling) {
 
-	FinalizeFuncPtr<STATE_TYPE, T> func = [=](STATE_TYPE &state, T &target, AggregateFinalizeData &finalize_data) -> void { // NOLINT
+	FinalizeFuncPtr<STATE_TYPE, T> func = [=](STATE_TYPE &state, T &target,
+	                                          AggregateFinalizeData &finalize_data) -> void { // NOLINT
 		py::gil_scoped_acquire gil;
 
 		const bool default_null_handling = null_handling == FunctionNullHandling::DEFAULT_NULL_HANDLING;
@@ -447,13 +447,11 @@ CreateFinalizeFunction(PyObject *function, PythonExceptionHandling exception_han
 			bool contains_null = false;
 			for (idx_t i = 0; i < parameters.size(); i++) {
 				// Fill the tuple with the arguments for this row
-				if (i == 0)
-				{
+				if (i == 0) {
 					STATE_TYPE value = state;
-					bundled_parameters[i] = PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
-				}
-				else
-				{
+					bundled_parameters[i] =
+					    PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
+				} else {
 					T value = target;
 					bundled_parameters[i] =
 					    PythonObject::FromValue(value, duckdb::LogicalType(parameters[i]), client_properties);
@@ -492,7 +490,6 @@ CreateFinalizeFunction(PyObject *function, PythonExceptionHandling exception_han
 	};
 	return func;
 }
-
 
 namespace {
 
@@ -635,23 +632,7 @@ public:
 	}
 
 	template <typename STATE_TYPE>
-	CombineFuncPtr<STATE_TYPE> GetCombineFunction
-		(const py::function &udf,
-		 PythonExceptionHandling exception_handling,
-		 bool side_effects,
-	     const ClientProperties &client_properties,
-	     const vector<LogicalType>& parameters,
-		 const LogicalType& return_type) {
-
-		auto &import_cache = *DuckDBPyConnection::ImportCache();
-		// Import this module, because importing this from a non-main thread causes a segfault
-		(void)import_cache.numpy.core.multiarray();
-
-		return CreateCombineFunction<STATE_TYPE>(udf.ptr(), exception_handling, client_properties, parameters, return_type, null_handling);
-	}
-
-	template <typename STATE_TYPE, typename T>
-	FinalizeFuncPtr<STATE_TYPE, T> GetFinalizeFunction(const py::function &udf, PythonExceptionHandling exception_handling,
+	CombineFuncPtr<STATE_TYPE> GetCombineFunction(const py::function &udf, PythonExceptionHandling exception_handling,
 	                                              bool side_effects, const ClientProperties &client_properties,
 	                                              const vector<LogicalType> &parameters,
 	                                              const LogicalType &return_type) {
@@ -660,8 +641,22 @@ public:
 		// Import this module, because importing this from a non-main thread causes a segfault
 		(void)import_cache.numpy.core.multiarray();
 
-		return CreateFinalizeFunction<STATE_TYPE, T>(udf.ptr(), exception_handling, client_properties, parameters,
+		return CreateCombineFunction<STATE_TYPE>(udf.ptr(), exception_handling, client_properties, parameters,
 		                                         return_type, null_handling);
+	}
+
+	template <typename STATE_TYPE, typename T>
+	FinalizeFuncPtr<STATE_TYPE, T>
+	GetFinalizeFunction(const py::function &udf, PythonExceptionHandling exception_handling, bool side_effects,
+	                    const ClientProperties &client_properties, const vector<LogicalType> &parameters,
+	                    const LogicalType &return_type) {
+
+		auto &import_cache = *DuckDBPyConnection::ImportCache();
+		// Import this module, because importing this from a non-main thread causes a segfault
+		(void)import_cache.numpy.core.multiarray();
+
+		return CreateFinalizeFunction<STATE_TYPE, T>(udf.ptr(), exception_handling, client_properties, parameters,
+		                                             return_type, null_handling);
 	}
 };
 
@@ -682,27 +677,9 @@ ScalarFunction DuckDBPyConnection::CreateScalarUDF(const string &name, const py:
 	return data.GetFunction(udf, exception_handling, side_effects, connection.context->GetClientProperties());
 }
 
-
 template <typename STATE_TYPE>
-CombineFuncPtr<STATE_TYPE> DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf,
-                                                   const py::object &parameters,
-                                                   const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
-                                                   FunctionNullHandling null_handling,
-                                                   PythonExceptionHandling exception_handling, bool side_effects)
-{
-	PythonUDFData data(name, vectorized, null_handling);
-	auto &connection = con.GetConnection();
-
-	data.AnalyzeSignature(udf);
-	data.OverrideParameters(parameters);
-	data.OverrideReturnType(return_type);
-	data.Verify();
-	return data.GetCombineFunction<STATE_TYPE>(udf, exception_handling, side_effects, connection.context->GetClientProperties(), data.parameters, data.return_type);
-}
-
-template <typename STATE_TYPE, typename T>
-FinalizeFuncPtr<STATE_TYPE, T>
-DuckDBPyConnection::CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
+CombineFuncPtr<STATE_TYPE>
+DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf, const py::object &parameters,
                                      const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                      FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
                                      bool side_effects) {
@@ -713,13 +690,30 @@ DuckDBPyConnection::CreateFinalizeUDF(const string &name, const py::function &ud
 	data.OverrideParameters(parameters);
 	data.OverrideReturnType(return_type);
 	data.Verify();
-	return data.GetFinalizeFunction<STATE_TYPE, T>(udf, exception_handling, side_effects,
+	return data.GetCombineFunction<STATE_TYPE>(udf, exception_handling, side_effects,
 	                                           connection.context->GetClientProperties(), data.parameters,
 	                                           data.return_type);
 }
 
-template
-CombineFuncPtr<double>
+template <typename STATE_TYPE, typename T>
+FinalizeFuncPtr<STATE_TYPE, T>
+DuckDBPyConnection::CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
+                                      const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                      FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
+                                      bool side_effects) {
+	PythonUDFData data(name, vectorized, null_handling);
+	auto &connection = con.GetConnection();
+
+	data.AnalyzeSignature(udf);
+	data.OverrideParameters(parameters);
+	data.OverrideReturnType(return_type);
+	data.Verify();
+	return data.GetFinalizeFunction<STATE_TYPE, T>(udf, exception_handling, side_effects,
+	                                               connection.context->GetClientProperties(), data.parameters,
+	                                               data.return_type);
+}
+
+template CombineFuncPtr<double>
 DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::function &udf, const py::object &parameters,
                                              const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                              FunctionNullHandling null_handling,
