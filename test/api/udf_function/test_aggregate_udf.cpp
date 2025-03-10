@@ -107,11 +107,13 @@ TEST_CASE("Aggregate UDFs", "[coverage][.]") {
 		    "udf_covar_pop_double_args", LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER));
 	}
 
+	std::function<void(Vector &, AggregateInputData &, Vector &, idx_t, idx_t)> finalize_func =
+	    &UDFSum::Finalize<UDFSum::sum_state_t, double>;
 	SECTION("Testing the generic CreateAggregateFunction()") {
 		REQUIRE_NOTHROW(con.CreateAggregateFunction(
 		    "udf_sum", {LogicalType::DOUBLE}, LogicalType::DOUBLE, &UDFSum::StateSize<UDFSum::sum_state_t>,
 		    &UDFSum::Initialize<UDFSum::sum_state_t>, &UDFSum::Update<UDFSum::sum_state_t, double>,
-		    &UDFSum::Combine<UDFSum::sum_state_t>, std::function(&UDFSum::Finalize<UDFSum::sum_state_t, double>),
+		    &UDFSum::Combine<UDFSum::sum_state_t>, finalize_func,
 		    &UDFSum::SimpleUpdate<UDFSum::sum_state_t, double>));
 
 		REQUIRE_NO_FAIL(con.Query("SELECT udf_sum(1)"));
