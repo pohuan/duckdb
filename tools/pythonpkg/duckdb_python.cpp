@@ -143,10 +143,12 @@ static void InitializeConnectionMethods(py::module_ &m) {
 	    py::arg("connection") = py::none());
 	m.def(
 	    "create_aggregate_function",
-	    [](const string &name, const py::function &udf, const py::object &arguments = py::none(),
-	       const shared_ptr<DuckDBPyType> &return_type = nullptr,
+	    [](const string &name,
+		   const py::function &udf,
+		    const py::object &arguments,
+	       const shared_ptr<DuckDBPyType> &return_type,
 			const py::function &finalize_udf,
-	       const py::object &finalize_arguments = py::none(),
+	       const py::object &finalize_arguments,
 	       const shared_ptr<DuckDBPyType> &finalize_return_type = nullptr
 		   PythonUDFType type = PythonUDFType::NATIVE,
 	       FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
