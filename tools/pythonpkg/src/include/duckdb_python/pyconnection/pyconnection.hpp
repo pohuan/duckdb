@@ -282,8 +282,9 @@ public:
 	                  PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR,
 	                  bool side_effects = false);
 
+	// think about whether to provide default argument
 	shared_ptr<DuckDBPyConnection> RegisterAggregateUDF(
-	    const string &name, const py::function &udf, const py::object &arguments = py::none(),
+	    const string &name, const py::function &udf, const py::object &arguments,
 	    const shared_ptr<DuckDBPyType> &return_type,
 		const py::function &finalize_udf,
 	    const py::object &finalize_arguments = py::none(),
