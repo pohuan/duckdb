@@ -287,7 +287,7 @@ public:
 	    const shared_ptr<DuckDBPyType> &return_type = nullptr,
 		const py::function &finalize_udf,
 	    const py::object &finalize_arguments = py::none(),
-	    const shared_ptr<DuckDBPyType> &finalize_return_type = nullptr
+	    const shared_ptr<DuckDBPyType> &finalize_return_type = nullptr,
 		PythonUDFType type = PythonUDFType::NATIVE,
 	    FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
 	    PythonExceptionHandling exception_handling = PythonExceptionHandling::FORWARD_ERROR, bool side_effects = false);
