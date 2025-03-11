@@ -719,4 +719,10 @@ DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::funct
                                              FunctionNullHandling null_handling,
                                              PythonExceptionHandling exception_handling, bool side_effects);
 
+template FinalizeFuncPtrTest<double, double>
+DuckDBPyConnection::CreateFinalizeUDF<double, double>(
+    const string &name, const py::function &udf, const py::object &parameters,
+    const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
+    PythonExceptionHandling exception_handling, bool side_effects);
+
 } // namespace duckdb
