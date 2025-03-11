@@ -471,7 +471,7 @@ bool UDFSumFunction::IgnoreNull() {
 shared_ptr<DuckDBPyConnection>
 DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function &udf, const py::object &arguments,
                                          const shared_ptr<DuckDBPyType> &return_type,
-										 const py::object &finalize_udf,
+										 const py::function & finalize_udf,
                                          const py::object &finalize_arguments,
 										const shared_ptr<DuckDBPyType> &finalize_return_type,		
 											PythonUDFType type,
