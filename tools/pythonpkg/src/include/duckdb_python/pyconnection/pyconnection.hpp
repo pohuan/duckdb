@@ -421,11 +421,9 @@ private:
 	                 const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
 	                 PythonExceptionHandling exception_handling, bool side_effects);
 
-	template <class STATE, class T>
-	using FinalizeFuncPtrTest = std::function<void(STATE &state, T &target, AggregateFinalizeData &finalize_data)>;
 
 	template <typename T, typename STATE_TYPE>
-	FinalizeFuncPtrTest<T, STATE_TYPE>
+	FinalizeFuncPtr<T, STATE_TYPE>
 	CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,
 	                  const shared_ptr<DuckDBPyType> &return_type, bool vectorized, FunctionNullHandling null_handling,
 	                  PythonExceptionHandling exception_handling, bool side_effects);
@@ -451,7 +449,7 @@ DuckDBPyConnection::CreateCombineUDF<double>(const string &name, const py::funct
                                              PythonExceptionHandling exception_handling, bool side_effects);
 
 // Prevent implicit instantiation in multiple translation units
-extern template FinalizeFuncPtrTest<double, double>
+extern template FinalizeFuncPtr<double, double>
 DuckDBPyConnection::CreateFinalizeUDF<double, double>(const string &name, const py::function &udf, const py::object &parameters,
                                               const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
                                               FunctionNullHandling null_handling,
