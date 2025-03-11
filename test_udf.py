@@ -37,6 +37,10 @@ def test_python_udf(d1, d2):
     return d1 + d2 + d1 + d2 + d1 + d2
 
 
+def test_finalize_udf(d1,d2):
+    d2 = d1;
+    return d2;
+
 con.execute(
     """
         INSERT INTO sales (id, category, amount) VALUES
@@ -50,7 +54,7 @@ con.execute(
 )
 # con.create_function("random_name", generate_random_name, [], VARCHAR)
 # con.create_aggregate_function("udf_avg", generate_random_name, [], DOUBLE)
-con.create_aggregate_function("udf_X", test_python_udf, [DOUBLE, DOUBLE], DOUBLE)
+con.create_aggregate_function("udf_X", test_python_udf, [DOUBLE, DOUBLE], DOUBLE, test_finalize_udf, [DOUBLE, DOUBLE], DOUBLE)
 result = con.execute(
     """
         SELECT udf_X(amount) FROM sales
