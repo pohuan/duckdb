@@ -56,8 +56,7 @@ typedef idx_t (*aggregate_size_t)(const AggregateFunction &function);
 //! The type used for initializing hashed aggregate function states
 typedef void (*aggregate_initialize_t)(const AggregateFunction &function, data_ptr_t state);
 //! The type used for updating hashed aggregate functions
-typedef void (*aggregate_update_t)(Vector inputs[], AggregateInputData &aggr_input_data, idx_t input_count,
-                                   Vector &state, idx_t count);
+using aggregate_update_t = std::function <void(Vector inputs[], AggregateInputData &aggr_input_data, idx_t input_count, Vector &state, idx_t count)>;
 
 // Define std::function type equivalent to aggregate_combine_t
 using aggregate_combine_t = std::function<void(Vector &, Vector &, AggregateInputData &, idx_t)>;
@@ -205,7 +204,8 @@ public:
 	shared_ptr<AggregateFunctionInfo> function_info;
 
 	bool operator==(const AggregateFunction &rhs) const {
-		return state_size == rhs.state_size && initialize == rhs.initialize && update == rhs.update &&
+		return state_size == rhs.state_size && initialize == rhs.initialize &&
+		       update.target<void (*)()>() == rhs.update.target<void (*)()>() &&
 		       combine.target<void (*)()>() == rhs.combine.target<void (*)()>() &&
 		       finalize.target<void (*)()>() == rhs.finalize.target<void (*)()>() && window == rhs.window;
 	}
