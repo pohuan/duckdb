@@ -287,7 +287,7 @@ public:
 	    const string &name, const py::function &udf, const py::object &arguments,
 	    const shared_ptr<DuckDBPyType> &return_type,
 		const py::function &finalize_udf,
-	    const py::object &finalize_arguments = py::none(),
+	    const py::object &finalize_arguments,
 	    const shared_ptr<DuckDBPyType> &finalize_return_type,
 		PythonUDFType type = PythonUDFType::NATIVE,
 	    FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING,
