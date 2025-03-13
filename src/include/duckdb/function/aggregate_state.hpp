@@ -105,4 +105,9 @@ using CombineFuncPtr = std::function<void(const STATE_TYPE &, STATE_TYPE &, Aggr
 template <class STATE, class T>
 using FinalizeFuncPtr = std::function<void(STATE &state, T &target, AggregateFinalizeData &finalize_data)>;
 
+
+template <class INPUT_TYPE, class STATE>
+using AggregateUpdateFuncPtr = std::function<void(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &)>;
+
+
 } // namespace duckdb

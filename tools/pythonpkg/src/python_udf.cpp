@@ -695,6 +695,24 @@ DuckDBPyConnection::CreateCombineUDF(const string &name, const py::function &udf
 	                                           data.return_type);
 }
 
+template <typename INPUT_TYPE, typename STATE>
+AggregateUpdateFuncPtr<INPUT_TYPE, STATE>
+DuckDBPyConnection::CreateAggregateUpdateUDF(const string &name, const py::function &udf, const py::object &parameters,
+                                     const shared_ptr<DuckDBPyType> &return_type, bool vectorized,
+                                     FunctionNullHandling null_handling, PythonExceptionHandling exception_handling,
+                                     bool side_effects) {
+	PythonUDFData data(name, vectorized, null_handling);
+	auto &connection = con.GetConnection();
+
+	data.AnalyzeSignature(udf);
+	data.OverrideParameters(parameters);
+	data.OverrideReturnType(return_type);
+	data.Verify();
+	return data.GetCombineFunction<STATE_TYPE>(udf, exception_handling, side_effects,
+	                                           connection.context->GetClientProperties(), data.parameters,
+	                                           data.return_type);
+}
+
 template <typename STATE_TYPE, typename T>
 FinalizeFuncPtr<STATE_TYPE, T>
 DuckDBPyConnection::CreateFinalizeUDF(const string &name, const py::function &udf, const py::object &parameters,

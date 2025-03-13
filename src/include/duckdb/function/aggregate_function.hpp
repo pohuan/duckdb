@@ -251,6 +251,23 @@ public:
 	template <class STATE, class INPUT_TYPE, class RESULT_TYPE, class OP,
 	          AggregateDestructorType destructor_type = AggregateDestructorType::STANDARD>
 	static AggregateFunction
+	UnaryAggregate(const LogicalType &input_type, LogicalType return_type,
+				   AggregateUpdateFuncPtr<INPUT_TYPE, STATE> aggregateUpdateFunction,
+				   CombineFuncPtr<STATE> combineFunction,
+	               FinalizeFuncPtr<STATE, RESULT_TYPE> finalizeFunction,
+	               FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING) {
+		return AggregateFunction({input_type}, return_type, AggregateFunction::StateSize<STATE>,
+		                         AggregateFunction::StateInitialize<STATE, OP, destructor_type>,
+		                        // AggregateFunction::UnaryScatterUpdate<STATE, INPUT_TYPE, OP>,
+								 aggregateUpdateFunction,
+		                         AggregateFunction::GetAggregateCombineFunction<STATE>(combineFunction),
+		                         AggregateFunction::GetAggregateFinalizeFunction<STATE, RESULT_TYPE>(finalizeFunction),
+		                         null_handling, AggregateFunction::UnaryUpdate<STATE, INPUT_TYPE, OP>);
+	}
+
+	template <class STATE, class INPUT_TYPE, class RESULT_TYPE, class OP,
+	          AggregateDestructorType destructor_type = AggregateDestructorType::STANDARD>
+	static AggregateFunction
 	UnaryAggregate(const LogicalType &input_type, LogicalType return_type, CombineFuncPtr<STATE> combineFunction,
 	               FinalizeFuncPtr<STATE, RESULT_TYPE> finalizeFunction,
 	               FunctionNullHandling null_handling = FunctionNullHandling::DEFAULT_NULL_HANDLING) {
@@ -320,6 +337,13 @@ public:
 		AggregateExecutor::UnaryScatter<STATE, T, OP>(inputs[0], states, aggr_input_data, count);
 	}
 
+	template <class STATE, class T, class OP>
+	static void UnaryScatterUpdateWithCustomAggregate(Vector inputs[], AggregateInputData &aggr_input_data, idx_t input_count,
+	                               Vector &states, idx_t count, AggregateUpdateFuncPtr aggregateUpdateFunc) {
+		D_ASSERT(input_count == 1);
+		AggregateExecutor::UnaryScatter<STATE, T, OP>(inputs[0], states, aggr_input_data, count);
+	}
+
 	template <class STATE, class INPUT_TYPE, class OP>
 	static void UnaryUpdate(Vector inputs[], AggregateInputData &aggr_input_data, idx_t input_count, data_ptr_t state,
 	                        idx_t count) {
@@ -350,6 +374,7 @@ public:
 	using AggregateCombineFunctionType = std::function<void(Vector &, Vector &, AggregateInputData &, idx_t)>;
 	using AggregateFinalizeFunctionType = std::function<void(Vector &, AggregateInputData &, Vector &, idx_t, idx_t)>;
 
+
 	template <typename STATE>
 	static aggregate_combine_t GetAggregateCombineFunction(CombineFuncPtr<STATE> combineFunction) {
 		// Return a function pointer that calls StateCombine with the given combineFunction
@@ -357,6 +382,20 @@ public:
 		AggregateCombineFunctionType functionToReturn =
 		    [combineFunction](Vector &source, Vector &target, AggregateInputData &aggr_input_data, idx_t count) {
 			    AggregateExecutor::Combine<STATE>(source, target, aggr_input_data, count, combineFunction);
+		    };
+
+		return functionToReturn;
+	}
+
+	template <typename INPUT_TYPE, typename STATE>
+	static aggregate_update_t GetAggregateUpdateFunction(AggregateUpdateFuncPtr<INPUT_TYPE, STATE> aggregateUpdateFuncPtr) {
+		// Return a function pointer that calls aggregateUpdateFuncPtr with the given updateFunction
+
+		aggregate_update_t functionToReturn =
+		    [aggregateUpdateFuncPtr](Vector inputs[], AggregateInputData & aggr_input_data, idx_t input_count,
+		                                  Vector & state, idx_t count) {
+			AggregateExecutor::UnaryScatterWithCustomAggregate<STATE, INPUT_TYPE>(source, target, aggr_input_data, count,
+			                                                          combineFunction);
 		    };
 
 		return functionToReturn;

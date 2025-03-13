@@ -118,6 +118,57 @@ private:
 		}
 	}
 
+	template <class STATE_TYPE, class INPUT_TYPE, class OP>
+	static inline void UnaryScatterLoopWithCustomAggregation(const INPUT_TYPE *__restrict idata, AggregateInputData &aggr_input_data,
+	                                    STATE_TYPE **__restrict states, const SelectionVector &isel,
+	                                    const SelectionVector &ssel, ValidityMask &mask, idx_t count,
+	                                      AggregateUpdateFuncPtr<INPUT_TYPE, STATE_TYPE> aggregateUpdateFuncPtr) {
+		if (OP::IgnoreNull() && !mask.AllValid()) {
+			// potential NULL values and NULL values are ignored
+			AggregateUnaryInput input(aggr_input_data, mask);
+			for (idx_t i = 0; i < count; i++) {
+				input.input_idx = isel.get_index(i);
+				auto sidx = ssel.get_index(i);
+				if (mask.RowIsValid(input.input_idx)) {
+					aggregateUpdateFuncPtr(*states[sidx], idata[input.input_idx], input);
+				}
+			}
+		} else {
+			// quick path: no NULL values or NULL values are not ignored
+			AggregateUnaryInput input(aggr_input_data, mask);
+			for (idx_t i = 0; i < count; i++) {
+				input.input_idx = isel.get_index(i);
+				auto sidx = ssel.get_index(i);
+				aggregateUpdateFuncPtr(*states[sidx], idata[input.input_idx], input);
+			}
+		}
+	}
+
+		template <class STATE_TYPE, class INPUT_TYPE, class OP>
+	static inline void UnaryScatterLoop(const INPUT_TYPE *__restrict idata, AggregateInputData &aggr_input_data,
+	                                    STATE_TYPE **__restrict states, const SelectionVector &isel,
+	                                    const SelectionVector &ssel, ValidityMask &mask, idx_t count) {
+		if (OP::IgnoreNull() && !mask.AllValid()) {
+			// potential NULL values and NULL values are ignored
+			AggregateUnaryInput input(aggr_input_data, mask);
+			for (idx_t i = 0; i < count; i++) {
+				input.input_idx = isel.get_index(i);
+				auto sidx = ssel.get_index(i);
+				if (mask.RowIsValid(input.input_idx)) {
+					OP::template Operation<INPUT_TYPE, STATE_TYPE, OP>(*states[sidx], idata[input.input_idx], input);
+				}
+			}
+		} else {
+			// quick path: no NULL values or NULL values are not ignored
+			AggregateUnaryInput input(aggr_input_data, mask);
+			for (idx_t i = 0; i < count; i++) {
+				input.input_idx = isel.get_index(i);
+				auto sidx = ssel.get_index(i);
+				OP::template Operation<INPUT_TYPE, STATE_TYPE, OP>(*states[sidx], idata[input.input_idx], input);
+			}
+		}
+	}
+
 #ifndef DUCKDB_SMALLER_BINARY
 	template <class STATE_TYPE, class INPUT_TYPE, class OP>
 	static inline void UnaryFlatUpdateLoop(const INPUT_TYPE *__restrict idata, AggregateInputData &aggr_input_data,
@@ -281,6 +332,40 @@ public:
 			UnaryScatterLoop<STATE_TYPE, INPUT_TYPE, OP>(UnifiedVectorFormat::GetData<INPUT_TYPE>(idata),
 			                                             aggr_input_data, (STATE_TYPE **)sdata.data, *idata.sel,
 			                                             *sdata.sel, idata.validity, count);
+		}
+	}
+
+	template <class STATE_TYPE, class INPUT_TYPE, class OP>
+	static void UnaryScatterWithCustomAggregate(Vector &input, Vector &states, AggregateInputData &aggr_input_data,
+	                                            idx_t count,
+	                                            AggregateUpdateFuncPtr<INPUT_TYPE, STATE_TYPE> aggregateUpdateFuncPtr) {
+		if (input.GetVectorType() == VectorType::CONSTANT_VECTOR &&
+		    states.GetVectorType() == VectorType::CONSTANT_VECTOR) {
+			if (OP::IgnoreNull() && ConstantVector::IsNull(input)) {
+				// constant NULL input in function that ignores NULL values
+				return;
+			}
+			// regular constant: get first state
+			auto idata = ConstantVector::GetData<INPUT_TYPE>(input);
+			auto sdata = ConstantVector::GetData<STATE_TYPE *>(states);
+			AggregateUnaryInput input_data(aggr_input_data, ConstantVector::Validity(input));
+			OP::template ConstantOperation<INPUT_TYPE, STATE_TYPE, OP>(**sdata, *idata, input_data, count);
+#ifndef DUCKDB_SMALLER_BINARY
+		} else if (input.GetVectorType() == VectorType::FLAT_VECTOR &&
+		           states.GetVectorType() == VectorType::FLAT_VECTOR) {
+			auto idata = FlatVector::GetData<INPUT_TYPE>(input);
+			auto sdata = FlatVector::GetData<STATE_TYPE *>(states);
+			UnaryFlatLoop<STATE_TYPE, INPUT_TYPE, OP>(idata, aggr_input_data, sdata, FlatVector::Validity(input),
+			                                          count);
+#endif
+		} else {
+			UnifiedVectorFormat idata, sdata;
+			input.ToUnifiedFormat(count, idata);
+			states.ToUnifiedFormat(count, sdata);
+			UnaryScatterLoopWithCustomAggregation<STATE_TYPE, INPUT_TYPE>(
+			    UnifiedVectorFormat::GetData<INPUT_TYPE>(idata),
+			                                             aggr_input_data, (STATE_TYPE **)sdata.data, *idata.sel,
+			    *sdata.sel, idata.validity, count, aggregateUpdateFuncPtr);
 		}
 	}
 

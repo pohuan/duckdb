@@ -490,6 +490,11 @@ DuckDBPyConnection::RegisterAggregateUDF(const string &name, const py::function 
 	}
 
 	// TODO: figure out strange c++ template and python co-op issue.
+
+	AggregateUpdateFuncPtr<double, double> aggregate_update_function =
+	    CreateAggregateUpdateUDF<double, double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW,
+	                                             null_handling, exception_handling, side_effects);
+
 	CombineFuncPtr<double> aggregate_combine_function =
 	    CreateCombineUDF<double>(name, udf, arguments, return_type, type == PythonUDFType::ARROW, null_handling,
 	                             exception_handling, side_effects);
